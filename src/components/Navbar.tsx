@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, Moon, Sun, ExternalLink } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
 import logoImg from '../assets/logo.jpg';
 import { detailedProducts } from '../data/productsData';
 
 interface NavbarProps {
     isDark: boolean;
     toggleTheme: () => void;
-    activeProductId: string;
-    onSelectProduct: (id: string) => void;
 }
 
-export const Navbar = ({ isDark, toggleTheme, activeProductId, onSelectProduct }: NavbarProps) => {
+export const Navbar = ({ isDark, toggleTheme }: NavbarProps) => {
     const [scrolled, setScrolled] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
+    const location = useLocation();
 
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 20);
@@ -37,9 +37,9 @@ export const Navbar = ({ isDark, toggleTheme, activeProductId, onSelectProduct }
                         : 'bg-white/50 dark:bg-[#0a0a0a]/50 border-black/5 dark:border-white/10 shadow-none'
                 } backdrop-blur-[24px]`}
             >
-                {/* Island Brand Logo */}
-                <a 
-                    href="#hero" 
+                {/* Island Brand Logo & Identity */}
+                <Link 
+                    to="/" 
                     onClick={() => setIsOpen(false)} 
                     className="shrink-0 flex items-center gap-2 pl-1 pr-2"
                 >
@@ -49,12 +49,12 @@ export const Navbar = ({ isDark, toggleTheme, activeProductId, onSelectProduct }
                         whileTap={{ scale: 0.95 }}
                         className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm"
                     >
-                        <img src={logoImg} alt="AGS Logo" className="w-full h-full object-cover" />
+                        <img src={logoImg} alt="A Generative Slice Logo" className="w-full h-full object-cover" />
                     </motion.div>
-                    <span className="hidden md:inline font-bold text-xs tracking-wider uppercase text-[#0F172A] dark:text-white">
-                        AGS <span className="text-[#FF5C00]">PRODX</span>
+                    <span className="hidden md:inline font-bold text-xs tracking-wider uppercase text-[#0F172A] dark:text-white font-heading">
+                        AGS <span className="text-[#FF5C00]">SUITE</span>
                     </span>
-                </a>
+                </Link>
 
                 {/* Nav Links Container */}
                 <div className="flex items-center min-w-0">
@@ -67,21 +67,31 @@ export const Navbar = ({ isDark, toggleTheme, activeProductId, onSelectProduct }
                                 exit={{ opacity: 0, x: 20 }}
                                 className="flex items-center gap-1 sm:gap-1.5 px-2 overflow-x-auto whitespace-nowrap scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
                             >
+                                <Link
+                                    to="/"
+                                    onClick={() => setIsOpen(false)}
+                                    className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 relative whitespace-nowrap ${
+                                        location.pathname === '/' 
+                                            ? 'text-[#FF5C00] bg-[#FF5C00]/10 border border-[#FF5C00]/20' 
+                                            : 'text-black/60 dark:text-white/60 hover:text-[#FF5C00] hover:bg-[#FF5C00]/5'
+                                    }`}
+                                >
+                                    Platform Hub
+                                </Link>
+
                                 {detailedProducts.map((p) => (
-                                    <button
+                                    <Link
                                         key={p.id}
-                                        onClick={() => {
-                                            onSelectProduct(p.id);
-                                            setIsOpen(false);
-                                        }}
+                                        to={p.path}
+                                        onClick={() => setIsOpen(false)}
                                         className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 relative whitespace-nowrap ${
-                                            activeProductId === p.id 
+                                            location.pathname === p.path 
                                                 ? 'text-[#FF5C00] bg-[#FF5C00]/10 border border-[#FF5C00]/20' 
                                                 : 'text-black/60 dark:text-white/60 hover:text-[#FF5C00] hover:bg-[#FF5C00]/5'
                                         }`}
                                     >
                                         {p.name}
-                                    </button>
+                                    </Link>
                                 ))}
 
                                 <a
@@ -89,6 +99,7 @@ export const Navbar = ({ isDark, toggleTheme, activeProductId, onSelectProduct }
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FF5C00] hover:bg-[#FF5C00]/10 flex items-center gap-1 transition-all"
+                                    title="Open official corporate website"
                                 >
                                     <span>agenerativeslice.com</span>
                                     <ExternalLink className="w-3 h-3" />
@@ -115,7 +126,7 @@ export const Navbar = ({ isDark, toggleTheme, activeProductId, onSelectProduct }
                             className={`p-2.5 rounded-xl transition-all duration-300 ${isOpen ? 'bg-[#FF5C00] text-white shadow-lg shadow-orange-500/20' : 'hover:bg-orange-500/10 hover:text-orange-500 text-black/70 dark:text-white/70'}`}
                             onClick={() => setIsOpen(!isOpen)}
                             aria-label="Toggle Menu"
-                            title="Toggle Products Menu"
+                            title="Toggle Tools Menu"
                         >
                             {isOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
                         </button>

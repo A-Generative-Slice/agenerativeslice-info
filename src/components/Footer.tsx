@@ -18,7 +18,7 @@ export const Footer = () => {
                                     A GENERATIVE SLICE
                                 </span>
                                 <span className="text-[#FF5C00] text-xs font-semibold">
-                                    ProdX & Slice Suite Engineering Hub
+                                    Slice Suite & Systems Laboratory
                                 </span>
                             </div>
                         </div>

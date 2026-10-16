@@ -12,6 +12,8 @@ export interface ProductFeature {
 export interface DetailedProduct {
     id: string;
     slug: string;
+    path: string;
+    repoName: string;
     name: string;
     category: string;
     tagline: string;
@@ -30,6 +32,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-3d',
         slug: 'slice-3d',
+        path: '/slice-3d',
+        repoName: 'Slice3D',
         name: 'Slice3D',
         category: 'Interactive 3D Product Showcase',
         tagline: 'Let your customers touch, rotate, and play with your products in 3D right in their browser.',
@@ -87,6 +91,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-leads',
         slug: 'slice-leads',
+        path: '/slice-leads',
+        repoName: 'SliceLeads',
         name: 'SliceLeads',
         category: 'Local Business Lead Finder & Prospecting',
         tagline: 'Finds verified local business leads and drafts friendly, personalized conversation starters.',
@@ -144,6 +150,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-mail',
         slug: 'slice-mail',
+        path: '/slice-mail',
+        repoName: 'SliceMail',
         name: 'SliceMail',
         category: 'Smart Outreach & Client Pitching',
         tagline: 'Send customized automated pitches and keep clients informed — reaching 400+ emails a day effortlessly.',
@@ -201,6 +209,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-inbox',
         slug: 'slice-inbox',
+        path: '/slice-inbox',
+        repoName: 'SliceInbox',
         name: 'SliceInbox',
         category: 'Team Mailbox Chief of Staff',
         tagline: 'A quiet digital manager that triages company inboxes and sorts out the noise.',
@@ -258,6 +268,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-ppt',
         slug: 'slice-ppt',
+        path: '/slice-ppt',
+        repoName: 'SlicePPT',
         name: 'SlicePPT',
         category: 'Instant Presentation & Deck Generator',
         tagline: 'Turns rough notes, spreadsheets, and specs into gorgeous presentation slides in seconds.',
@@ -315,6 +327,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-dam',
         slug: 'slice-dam',
+        path: '/slice-dam',
+        repoName: 'SliceDAM',
         name: 'SliceDAM',
         category: 'Business Document & Asset Hub',
         tagline: 'Organize client contracts, invoices, NDAs, and team files in one clean, searchable vault.',
@@ -372,6 +386,8 @@ export const detailedProducts: DetailedProduct[] = [
     {
         id: 'slice-class',
         slug: 'slice-class',
+        path: '/slice-class',
+        repoName: 'SliceClass',
         name: 'SliceClass',
         category: 'Private Academy & Video Studio',
         tagline: 'A clean online course studio for teaching your craft with zero tech headaches.',
