@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
     Play, Pause, CheckCircle2, 
-    Smartphone, Volume2, Maximize, FileText 
+    Smartphone, Volume2, Maximize, ExternalLink, GraduationCap, Award
 } from 'lucide-react';
-import logoImg from '../../assets/logo.jpg';
+import { RepoSyncBar } from '../RepoSyncBar';
 
 interface Lesson {
     id: string;
@@ -18,6 +18,7 @@ const mockLessons: Lesson[] = [
     { id: 'l-2', title: '02. 3D WebGL Pipeline & Draco Geometry Compression', duration: '18:15', completed: false, active: true },
     { id: 'l-3', title: '03. Local Business Discovery & Phone Verification', duration: '15:20', completed: false, active: false },
     { id: 'l-4', title: '04. Client Dispatch Engine & Paced 400 Mails/Day', duration: '21:05', completed: false, active: false },
+    { id: 'l-5', title: '05. FastMCP Mailbox Triage Server & Autonomous Guardrails', duration: '16:30', completed: false, active: false }
 ];
 
 export const SliceClassShowcase: React.FC = () => {
@@ -25,7 +26,7 @@ export const SliceClassShowcase: React.FC = () => {
     const [lessons, setLessons] = useState<Lesson[]>(mockLessons);
     const [currentTime, setCurrentTime] = useState(252); // seconds (04:12)
     const [showOtpModal, setShowOtpModal] = useState(false);
-    const [phoneNumber, setPhoneNumber] = useState('+91 98402 11842');
+    const [phoneNumber, setPhoneNumber] = useState('+91 78128 91494');
     const [otp, setOtp] = useState('8492');
     const [isLoggedIn, setIsLoggedIn] = useState(true);
 
@@ -51,191 +52,204 @@ export const SliceClassShowcase: React.FC = () => {
     };
 
     return (
-        <div className="w-full rounded-3xl border border-white/10 bg-[#0F172A] overflow-hidden shadow-2xl flex flex-col">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-white/10 bg-[#0B0F17]/90 backdrop-blur flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                    <img src={logoImg} alt="AGS Logo" className="w-8 h-8 rounded-full border border-[#FF5C00]/40 object-cover" />
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-white font-heading">SliceClass Studio LMS</span>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FF5C00]/20 text-[#FF5C00] border border-[#FF5C00]/30">
-                                Monochromatic Player
-                            </span>
-                        </div>
-                        <p className="text-[11px] text-white/50">Distraction-free learning portal with instant phone OTP login</p>
-                    </div>
-                </div>
+        <div>
+            {/* Live GitHub Repository Sync Bar */}
+            <RepoSyncBar repoName="SliceClass" />
 
-                <div className="flex items-center gap-3">
-                    <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-white/70">
-                        <span className="flex items-center gap-1.5 text-emerald-400">
-                            <Smartphone className="w-3.5 h-3.5" /> Password-Free OTP
-                        </span>
-                        <span className="text-white/20">|</span>
-                        <span>Adaptive Bitrate 1080p</span>
-                    </div>
-
-                    <button
-                        onClick={() => setShowOtpModal(!showOtpModal)}
-                        className="px-3 py-1.5 rounded-xl bg-white/5 text-white/80 hover:text-white border border-white/10 text-xs font-medium"
-                    >
-                        {isLoggedIn ? 'Student: Hussain' : 'Log In via OTP'}
-                    </button>
-                </div>
-            </div>
-
-            {/* OTP Simulator Drawer if open */}
-            {showOtpModal && (
-                <div className="p-4 bg-[#0B0F17] border-b border-[#FF5C00]/30 animate-fadeIn flex items-center justify-between flex-wrap gap-4">
+            <div className="rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#111] overflow-hidden shadow-2xl flex flex-col">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] flex items-center justify-between flex-wrap gap-4">
                     <div className="flex items-center gap-3">
-                        <Smartphone className="w-5 h-5 text-[#FF5C00]" />
+                        <div className="w-10 h-10 rounded-xl bg-[#FF5C00]/10 border border-[#FF5C00]/20 flex items-center justify-center text-[#FF5C00]">
+                            <GraduationCap className="w-5 h-5" />
+                        </div>
                         <div>
-                            <div className="text-xs font-bold text-white">One-Tap Phone Authentication</div>
-                            <div className="text-[11px] text-white/50">Zero forgotten passwords for students or clients</div>
+                            <div className="flex items-center gap-2">
+                                <span className="font-bold text-sm text-[#0F172A] dark:text-white font-heading">
+                                    SliceClass Monochromatic Academy & Video LMS
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
+                                    Phone OTP Login
+                                </span>
+                            </div>
+                            <p className="text-[11px] text-[#64748B] dark:text-white/50">
+                                Distraction-free video streaming with zero buffer delays
+                            </p>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="text"
-                            value={phoneNumber}
-                            onChange={(e) => setPhoneNumber(e.target.value)}
-                            className="bg-[#0F172A] border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white font-mono"
-                        />
-                        <input
-                            type="text"
-                            value={otp}
-                            onChange={(e) => setOtp(e.target.value)}
-                            placeholder="OTP"
-                            className="w-16 bg-[#0F172A] border border-white/15 rounded-xl px-2 py-1.5 text-xs text-white text-center font-mono"
-                        />
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-[#64748B] dark:text-white/60">
+                            <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold">
+                                <Smartphone className="w-3.5 h-3.5" /> Password-Free OTP
+                            </span>
+                            <span>•</span>
+                            <span>1080p 60FPS</span>
+                        </div>
+
                         <button
-                            onClick={() => {
-                                setIsLoggedIn(true);
-                                setShowOtpModal(false);
-                            }}
-                            className="px-3 py-1.5 rounded-xl bg-[#FF5C00] text-white text-xs font-bold"
+                            onClick={() => setShowOtpModal(!showOtpModal)}
+                            className="px-3 py-1.5 rounded-xl bg-black/5 dark:bg-white/10 text-xs font-semibold text-[#0F172A] dark:text-white hover:bg-[#FF5C00] hover:text-white transition-all"
                         >
-                            Verify & Enter
+                            {isLoggedIn ? 'Student: Hussain' : 'Log In via OTP'}
                         </button>
                     </div>
                 </div>
-            )}
 
-            {/* Split Screen: Video Player & Course Curriculum */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 flex-grow min-h-[420px]">
-                {/* Video Player Column */}
-                <div className="lg:col-span-8 p-6 flex flex-col justify-between bg-black/60">
-                    {/* Screen Viewport */}
-                    <div className="relative aspect-video w-full rounded-2xl bg-gradient-to-tr from-[#0F172A] to-[#1E293B] border border-white/10 overflow-hidden shadow-2xl flex flex-col justify-between p-6">
-                        {/* Overlay Top Bar */}
-                        <div className="flex items-center justify-between text-xs text-white/80 z-10">
-                            <span className="font-heading font-bold text-white">{activeLesson.title}</span>
-                            <span className="px-2 py-0.5 rounded bg-black/60 font-mono text-[10px] text-emerald-400 border border-white/10">
-                                1080p 60fps HD
-                            </span>
+                {/* OTP Drawer */}
+                {showOtpModal && (
+                    <div className="p-4 bg-orange-500/5 border-b border-orange-500/20 flex items-center justify-between flex-wrap gap-4 text-xs">
+                        <div className="flex items-center gap-3">
+                            <Smartphone className="w-5 h-5 text-[#FF5C00]" />
+                            <div>
+                                <span className="font-bold text-[#0F172A] dark:text-white">One-Tap Phone OTP Authentication</span>
+                                <p className="text-[11px] text-[#64748B] dark:text-white/50">Zero forgotten passwords for students or apprentices</p>
+                            </div>
                         </div>
 
-                        {/* Center Play Button */}
-                        <div className="flex items-center justify-center z-10">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                className="px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#111] text-xs font-mono"
+                            />
+                            <input
+                                type="text"
+                                value={otp}
+                                onChange={(e) => setOtp(e.target.value)}
+                                className="w-20 px-3 py-1.5 rounded-lg border border-black/10 dark:border-white/10 bg-white dark:bg-[#111] text-xs font-mono text-center tracking-widest text-[#FF5C00] font-bold"
+                            />
                             <button
-                                onClick={togglePlay}
-                                className="w-16 h-16 rounded-full bg-[#FF5C00] hover:bg-[#FF8C1A] text-white flex items-center justify-center shadow-2xl shadow-[#FF5C00]/40 transition-transform hover:scale-105 active:scale-95"
+                                onClick={() => {
+                                    setIsLoggedIn(true);
+                                    setShowOtpModal(false);
+                                }}
+                                className="px-3 py-1.5 rounded-lg bg-[#FF5C00] text-white text-xs font-bold hover:bg-[#FF8C1A]"
                             >
-                                {isPlaying ? <Pause className="w-7 h-7" /> : <Play className="w-7 h-7 ml-1" />}
+                                Verify OTP
                             </button>
                         </div>
+                    </div>
+                )}
 
-                        {/* Player Controls Bar */}
-                        <div className="space-y-2 z-10 bg-black/70 backdrop-blur-md p-3 rounded-xl border border-white/10">
-                            {/* Scrubber */}
-                            <div className="w-full bg-white/20 h-1 rounded-full cursor-pointer overflow-hidden">
-                                <div className="bg-[#FF5C00] h-full w-[35%] rounded-full" />
+                {/* Main Split: Video Player vs Curriculum Syllabus */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-black/5 dark:divide-white/10">
+                    {/* Video Player */}
+                    <div className="lg:col-span-8 p-6 flex flex-col justify-between space-y-4">
+                        {/* Video Canvas Container */}
+                        <div className="relative w-full aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-black/10 dark:border-white/10 shadow-2xl flex items-center justify-center group">
+                            {/* Ambient Glow */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-[#FF5C00]/10 via-transparent to-blue-500/10 pointer-events-none" />
+
+                            {/* Simulated Video Scene */}
+                            <div className="text-center space-y-3 z-10 px-6">
+                                <div className="w-14 h-14 rounded-full bg-[#FF5C00] text-white flex items-center justify-center mx-auto shadow-xl shadow-[#FF5C00]/30 cursor-pointer transform group-hover:scale-110 transition-transform" onClick={togglePlay}>
+                                    {isPlaying ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6 ml-1" />}
+                                </div>
+                                <h4 className="text-white font-bold text-base font-heading">
+                                    {activeLesson.title}
+                                </h4>
+                                <p className="text-xs text-white/60 font-mono">
+                                    Time: {formatSeconds(currentTime)} / {activeLesson.duration}
+                                </p>
                             </div>
 
-                            <div className="flex items-center justify-between text-xs text-white/70 font-mono">
+                            {/* Bottom Video Controls Overlay */}
+                            <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent flex items-center justify-between text-white text-xs">
                                 <div className="flex items-center gap-3">
-                                    <button onClick={togglePlay} className="text-white hover:text-[#FF5C00]">
-                                        {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                                    <button onClick={togglePlay} className="hover:text-[#FF5C00] transition-colors">
+                                        {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                                     </button>
-                                    <span className="text-[11px]">{formatSeconds(currentTime)} / {activeLesson.duration}</span>
+                                    <span className="font-mono text-[11px]">{formatSeconds(currentTime)}</span>
                                 </div>
 
-                                <div className="flex items-center gap-3 text-[11px]">
-                                    <span className="text-[#FF5C00] font-bold">1.25x</span>
-                                    <Volume2 className="w-3.5 h-3.5 hover:text-white cursor-pointer" />
-                                    <Maximize className="w-3.5 h-3.5 hover:text-white cursor-pointer" />
+                                {/* Scrubber Bar */}
+                                <div className="flex-1 mx-4 h-1 bg-white/20 rounded-full overflow-hidden cursor-pointer">
+                                    <div className="h-full bg-[#FF5C00] w-1/4" />
+                                </div>
+
+                                <div className="flex items-center gap-3 text-white/70">
+                                    <Volume2 className="w-4 h-4" />
+                                    <Maximize className="w-4 h-4" />
                                 </div>
                             </div>
                         </div>
 
-                        {/* Subtle background studio grid */}
-                        <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#FF5C00_1px,transparent_1px)] [background-size:24px_24px]" />
+                        {/* Video Lesson Description */}
+                        <div className="p-4 rounded-2xl bg-black/[0.02] dark:bg-white/[0.02] border border-black/5 dark:border-white/10 flex items-center justify-between text-xs text-[#64748B] dark:text-white/60">
+                            <div>
+                                <span className="font-bold text-[#0F172A] dark:text-white block">Curriculum Blueprint: course_outline.md</span>
+                                <span>Module 2: 3D WebGL Pipeline & Draco Geometry Compression</span>
+                            </div>
+                            <span className="px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-bold font-mono">
+                                40% Completed
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Lesson Notes & Downloadable Resource */}
-                    <div className="mt-4 flex items-center justify-between text-xs text-white/60">
-                        <span className="flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5 text-[#FF5C00]" /> Accompanying Code Repo & Cheatsheet available
-                        </span>
-                        <button 
-                            onClick={() => alert('Download: slice_class_cheatsheet.pdf')}
-                            className="text-[#FF5C00] font-bold hover:underline"
-                        >
-                            Download Lesson PDF
-                        </button>
-                    </div>
-                </div>
-
-                {/* Course Curriculum Column */}
-                <div className="lg:col-span-4 p-5 border-t lg:border-t-0 lg:border-l border-white/10 bg-[#0B0F17]/40 flex flex-col justify-between">
-                    <div>
-                        <div className="text-xs font-bold uppercase tracking-wider text-white/60 font-heading mb-2">
-                            Course Curriculum
+                    {/* Syllabus Modules */}
+                    <div className="lg:col-span-4 p-6 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold uppercase tracking-wider text-[#FF5C00] font-heading">
+                                Course Outline & Syllabus
+                            </span>
+                            <span className="text-xs text-[#64748B] dark:text-white/40 font-mono">
+                                5 Lessons
+                            </span>
                         </div>
 
-                        {/* Completion Bar */}
-                        <div className="mb-4 p-3 rounded-xl bg-white/[0.03] border border-white/5 space-y-1.5">
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-white/70">Overall Completion</span>
-                                <span className="font-mono font-bold text-[#FF5C00]">25%</span>
-                            </div>
-                            <div className="w-full bg-white/10 h-1.5 rounded-full overflow-hidden">
-                                <div className="bg-[#FF5C00] h-full w-1/4 rounded-full" />
-                            </div>
-                        </div>
-
-                        {/* Lesson List */}
                         <div className="space-y-2">
                             {lessons.map((lesson) => (
-                                <div
+                                <button
                                     key={lesson.id}
                                     onClick={() => selectLesson(lesson.id)}
-                                    className={`p-3 rounded-xl border cursor-pointer transition-all ${
+                                    className={`w-full text-left p-3.5 rounded-2xl border transition-all flex items-center justify-between gap-3 ${
                                         lesson.active
-                                            ? 'bg-[#FF5C00]/15 border-[#FF5C00] text-white shadow-lg'
-                                            : 'bg-white/[0.02] border-white/5 text-white/60 hover:text-white hover:bg-white/5'
+                                            ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#0F172A] dark:text-white shadow-sm'
+                                            : 'border-black/5 dark:border-white/10 hover:border-black/20 text-[#64748B] dark:text-white/70'
                                     }`}
                                 >
-                                    <div className="flex items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                            {lesson.completed ? (
-                                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                                            ) : (
-                                                <div className="w-3.5 h-3.5 rounded-full border border-white/30 shrink-0" />
-                                            )}
-                                            <span className="text-xs font-medium line-clamp-1">{lesson.title}</span>
-                                        </div>
-                                        <span className="text-[10px] font-mono text-white/40 shrink-0">{lesson.duration}</span>
+                                    <div className="space-y-0.5">
+                                        <div className="font-bold text-xs">{lesson.title}</div>
+                                        <div className="text-[11px] opacity-60 font-mono">{lesson.duration}</div>
                                     </div>
-                                </div>
+
+                                    {lesson.completed ? (
+                                        <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                    ) : lesson.active ? (
+                                        <span className="w-2 h-2 rounded-full bg-[#FF5C00] animate-pulse shrink-0" />
+                                    ) : (
+                                        <span className="w-2 h-2 rounded-full bg-black/20 dark:bg-white/20 shrink-0" />
+                                    )}
+                                </button>
                             ))}
                         </div>
-                    </div>
 
-                    <div className="mt-4 pt-3 border-t border-white/10 text-[11px] text-white/40 font-mono text-center">
-                        SliceClass Studio Engine • AGS
+                        {/* Completion Award Badge */}
+                        <div className="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20 text-xs space-y-1">
+                            <div className="flex items-center gap-2 font-bold text-amber-700 dark:text-amber-300">
+                                <Award className="w-4 h-4 text-[#FF5C00]" />
+                                <span>Apprenticeship Certification</span>
+                            </div>
+                            <p className="text-[11px] text-[#64748B] dark:text-white/60 leading-relaxed">
+                                Completing all modules awards a cryptographically verifiable AGS Apprentice Certificate.
+                            </p>
+                        </div>
+
+                        {/* Repo Link */}
+                        <div className="pt-2 flex items-center justify-between text-xs text-[#64748B] dark:text-white/50">
+                            <span className="font-mono">SliceClass Repo</span>
+                            <a
+                                href="https://github.com/A-Generative-Slice/SliceClass"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FF5C00] hover:underline flex items-center gap-1 font-semibold"
+                            >
+                                <span>Browse on GitHub</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>

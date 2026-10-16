@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
-    Sparkles, CheckCircle2, Send, User 
+    Inbox, CheckCircle2, FileText, ExternalLink, Bot
 } from 'lucide-react';
-import logoImg from '../../assets/logo.jpg';
+import { RepoSyncBar } from '../RepoSyncBar';
 
 interface TriageEmail {
     id: string;
@@ -14,6 +14,7 @@ interface TriageEmail {
     timestamp: string;
     priority: 'urgent' | 'normal' | 'filtered';
     tag: string;
+    aiConfidence: string;
     suggestedReply: string;
 }
 
@@ -35,7 +36,8 @@ Karthik Ramanathan
 Managing Director, Ramanathan Builders`,
         timestamp: '12 mins ago',
         priority: 'urgent',
-        tag: 'High-Value Lead',
+        tag: 'High-Value Inbound Lead',
+        aiConfidence: '98.7% Triage Match',
         suggestedReply: `Hi Karthik,
 
 Thank you for reaching out! Slice3D is specifically engineered for high-touch real estate launches like your ECR villa enclave, giving prospective buyers smooth 60fps 3D exploration right inside their phone browser.
@@ -44,7 +46,7 @@ Thursday afternoon works perfectly for our founding engineering team. I will sen
 
 Looking forward to speaking,
 Mohammed Hussain
-A Generative Slice`
+Director, A Generative Slice`
     },
     {
         id: 'inbox-2',
@@ -61,6 +63,7 @@ Divya`,
         timestamp: '1 hour ago',
         priority: 'normal',
         tag: 'Billing & Compliance',
+        aiConfidence: '99.2% Triage Match',
         suggestedReply: `Hi Divya,
 
 Certainly. I have regenerated the signed tax invoice with your updated GSTIN via our SliceDAM system. The verified PDF is attached for your accounting audit.
@@ -70,15 +73,16 @@ A Generative Slice Accounts`
     },
     {
         id: 'inbox-3',
-        sender: 'Global Domains Special Deals',
+        sender: 'Global Domains Deals',
         email: 'promo@unsolicitedhostingdeals.biz',
         subject: 'LAST CHANCE: 85% Discount on Off-shore Virtual Dedicated Servers!',
         snippet: 'Do not miss our lowest pricing of the quarter on Linux VPS hosting with unmetered bandwidth...',
         fullMessage: `Dear Webmaster, save 85% on cloud hosting packages! Click here to claim your limited discount coupon code before midnight!`,
         timestamp: '3 hours ago',
         priority: 'filtered',
-        tag: 'Automated Noise Filtered',
-        suggestedReply: 'Auto-archived by SliceInbox AI rules engine. Zero staff attention required.'
+        tag: 'Automated Noise Suppressed',
+        aiConfidence: '99.9% Spam Classification',
+        suggestedReply: 'Auto-archived by SliceInbox FastMCP rules engine. Zero staff attention required.'
     }
 ];
 
@@ -97,164 +101,181 @@ export const SliceInboxShowcase: React.FC = () => {
     };
 
     return (
-        <div className="w-full rounded-3xl border border-white/10 bg-[#0F172A] overflow-hidden shadow-2xl flex flex-col">
-            {/* Header */}
-            <div className="px-5 py-4 border-b border-white/10 bg-[#0B0F17]/90 backdrop-blur flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3">
-                    <img src={logoImg} alt="AGS Logo" className="w-8 h-8 rounded-full border border-[#FF5C00]/40 object-cover" />
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm text-white font-heading">SliceInbox Chief of Staff</span>
-                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#FF5C00]/20 text-[#FF5C00] border border-[#FF5C00]/30">
-                                24/7 Triage Engine
-                            </span>
+        <div>
+            {/* Live GitHub Repository Sync Bar */}
+            <RepoSyncBar repoName="SliceInbox" />
+
+            <div className="rounded-3xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#111] overflow-hidden shadow-2xl flex flex-col">
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-black/5 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#FF5C00]/10 border border-[#FF5C00]/20 flex items-center justify-center text-[#FF5C00]">
+                            <Inbox className="w-5 h-5" />
                         </div>
-                        <p className="text-[11px] text-white/50">Auto-sorts noise, prioritizes high-value inquiries & drafts responses</p>
-                    </div>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs font-mono text-white/70">
-                    <span className="flex items-center gap-1.5 text-emerald-400">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Self-Hosted Privacy
-                    </span>
-                    <span className="text-white/20">|</span>
-                    <span>Zero Data Leakage</span>
-                </div>
-            </div>
-
-            {/* Sub-header Filter Tabs */}
-            <div className="px-6 py-3 bg-[#0B0F17]/50 border-b border-white/10 flex items-center gap-2 text-xs">
-                <button
-                    onClick={() => setFilter('all')}
-                    className={`px-3 py-1.5 rounded-xl font-medium transition-colors ${
-                        filter === 'all' ? 'bg-[#FF5C00] text-white' : 'bg-white/5 text-white/60 hover:text-white'
-                    }`}
-                >
-                    All Messages ({mockInboxFeed.length})
-                </button>
-                <button
-                    onClick={() => setFilter('urgent')}
-                    className={`px-3 py-1.5 rounded-xl font-medium transition-colors ${
-                        filter === 'urgent' ? 'bg-[#FF5C00] text-white' : 'bg-white/5 text-white/60 hover:text-white'
-                    }`}
-                >
-                    Urgent Leads (1)
-                </button>
-                <button
-                    onClick={() => setFilter('normal')}
-                    className={`px-3 py-1.5 rounded-xl font-medium transition-colors ${
-                        filter === 'normal' ? 'bg-[#FF5C00] text-white' : 'bg-white/5 text-white/60 hover:text-white'
-                    }`}
-                >
-                    Operations (1)
-                </button>
-            </div>
-
-            {/* Split Screen Layout */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 flex-grow min-h-[440px]">
-                {/* Inbox List Column */}
-                <div className="lg:col-span-5 border-b lg:border-b-0 lg:border-r border-white/10 divide-y divide-white/5 bg-[#0B0F17]/20">
-                    {filteredEmails.map((email) => (
-                        <div
-                            key={email.id}
-                            onClick={() => handleSelectEmail(email)}
-                            className={`p-4 cursor-pointer transition-colors ${
-                                selectedEmail.id === email.id
-                                    ? 'bg-white/10 border-l-4 border-l-[#FF5C00]'
-                                    : 'hover:bg-white/[0.03]'
-                            }`}
-                        >
-                            <div className="flex items-center justify-between mb-1">
-                                <span className="font-bold text-xs text-white">{email.sender}</span>
-                                <span className="text-[10px] text-white/40 font-mono">{email.timestamp}</span>
-                            </div>
-
-                            <div className="text-xs font-semibold text-white/90 truncate mb-1">
-                                {email.subject}
-                            </div>
-
-                            <p className="text-[11px] text-white/50 line-clamp-1 mb-2">
-                                {email.snippet}
-                            </p>
-
+                        <div>
                             <div className="flex items-center gap-2">
-                                <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                    email.priority === 'urgent'
-                                        ? 'bg-[#FF5C00]/20 text-[#FF5C00] border border-[#FF5C00]/30'
-                                        : email.priority === 'normal'
-                                            ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30'
-                                            : 'bg-white/10 text-white/40'
-                                }`}>
-                                    {email.tag}
+                                <span className="font-bold text-sm text-[#0F172A] dark:text-white font-heading">
+                                    SliceInbox FastMCP AI Chief of Staff
+                                </span>
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
+                                    24/7 Zero Noise Engine
                                 </span>
                             </div>
-                        </div>
-                    ))}
-                </div>
-
-                {/* Email & AI Draft Review Column */}
-                <div className="lg:col-span-7 p-6 flex flex-col justify-between bg-[#0F172A]">
-                    <div>
-                        {/* Header details */}
-                        <div className="pb-4 border-b border-white/10 mb-4">
-                            <div className="flex items-center justify-between gap-2 mb-2">
-                                <h4 className="text-sm font-bold text-white font-heading">{selectedEmail.subject}</h4>
-                                <span className="text-[10px] font-mono text-white/40">{selectedEmail.timestamp}</span>
-                            </div>
-                            <div className="text-xs text-white/60 flex items-center gap-2">
-                                <User className="w-3.5 h-3.5 text-[#FF5C00]" />
-                                <span>{selectedEmail.sender}</span>
-                                <span className="text-white/30">&lt;{selectedEmail.email}&gt;</span>
-                            </div>
-                        </div>
-
-                        {/* Customer Email Body */}
-                        <div className="text-xs text-white/80 bg-[#0B0F17] p-4 rounded-2xl border border-white/5 leading-relaxed whitespace-pre-line mb-4 font-sans">
-                            {selectedEmail.fullMessage}
-                        </div>
-
-                        {/* AI Suggested Response Box */}
-                        <div className="rounded-2xl border border-[#FF5C00]/30 bg-gradient-to-b from-[#FF5C00]/10 to-transparent p-4">
-                            <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-bold text-[#FF5C00] flex items-center gap-1.5 font-heading">
-                                    <Sparkles className="w-3.5 h-3.5" /> AI Chief of Staff Drafted Reply
-                                </span>
-                                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded">
-                                    Confidence: 99%
-                                </span>
-                            </div>
-
-                            <p className="text-xs text-white/90 whitespace-pre-line leading-relaxed font-sans bg-black/40 p-3 rounded-xl border border-white/5">
-                                {selectedEmail.suggestedReply}
+                            <p className="text-[11px] text-[#64748B] dark:text-white/50">
+                                Autonomous email classifier with human-in-the-loop dispatch review
                             </p>
                         </div>
                     </div>
 
-                    {/* Bottom Action Footer */}
-                    <div className="mt-5 pt-4 border-t border-white/10 flex items-center justify-between flex-wrap gap-4">
-                        <span className="text-[11px] text-white/50">
-                            Human review guarantee: Nothing sends until your team clicks approve.
+                    <div className="flex items-center gap-2">
+                        <span className="text-xs font-mono font-semibold px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            FastMCP Server Active
                         </span>
+                    </div>
+                </div>
 
-                        <button
-                            onClick={() => setIsApproved(true)}
-                            disabled={isApproved || selectedEmail.priority === 'filtered'}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
-                                isApproved
-                                    ? 'bg-emerald-500 text-white'
-                                    : 'bg-[#FF5C00] hover:bg-[#FF8C1A] text-white shadow-lg shadow-[#FF5C00]/20 disabled:opacity-40'
-                            }`}
-                        >
-                            {isApproved ? (
-                                <>
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Approved & Dispatched
-                                </>
-                            ) : (
-                                <>
-                                    <Send className="w-3.5 h-3.5" /> Approve & Send Draft
-                                </>
+                {/* Filter Sub-Bar */}
+                <div className="px-6 py-3 bg-black/[0.01] dark:bg-white/[0.01] border-b border-black/5 dark:border-white/10 flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-bold text-[#64748B] dark:text-white/40 mr-2 uppercase tracking-widest text-[10px]">
+                            Filter Feed:
+                        </span>
+                        {(['all', 'urgent', 'normal'] as const).map((mode) => (
+                            <button
+                                key={mode}
+                                onClick={() => setFilter(mode)}
+                                className={`px-3 py-1 rounded-lg text-xs font-semibold capitalize transition-all ${
+                                    filter === mode
+                                        ? 'bg-[#FF5C00] text-white shadow-sm'
+                                        : 'bg-black/5 dark:bg-white/5 text-[#64748B] dark:text-white/60 hover:text-[#0F172A] dark:hover:text-white'
+                                }`}
+                            >
+                                {mode}
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="text-xs text-[#64748B] dark:text-white/40 font-mono">
+                        Rulebook: <code className="text-[#FF5C00]">agent_instructions.md</code>
+                    </div>
+                </div>
+
+                {/* Main Split: Inboxes List vs AI Decision Inspector */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-black/5 dark:divide-white/10">
+                    {/* Emails List */}
+                    <div className="lg:col-span-5 divide-y divide-black/5 dark:divide-white/5 max-h-[560px] overflow-y-auto">
+                        {filteredEmails.map((email) => (
+                            <div
+                                key={email.id}
+                                onClick={() => handleSelectEmail(email)}
+                                className={`p-5 cursor-pointer transition-all ${
+                                    selectedEmail.id === email.id
+                                        ? 'bg-[#FF5C00]/5 border-l-4 border-l-[#FF5C00]'
+                                        : 'hover:bg-black/[0.02] dark:hover:bg-white/[0.02]'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between mb-1.5">
+                                    <span className="font-bold text-xs text-[#0F172A] dark:text-white">
+                                        {email.sender}
+                                    </span>
+                                    <span className="text-[10px] text-[#64748B] dark:text-white/40 font-mono">
+                                        {email.timestamp}
+                                    </span>
+                                </div>
+                                <div className="font-semibold text-xs text-[#0F172A] dark:text-white/90 truncate mb-1">
+                                    {email.subject}
+                                </div>
+                                <p className="text-[11px] text-[#64748B] dark:text-white/50 line-clamp-2 leading-relaxed mb-2.5">
+                                    {email.snippet}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                        email.priority === 'urgent'
+                                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                                            : email.priority === 'normal'
+                                                ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                                                : 'bg-slate-500/10 text-slate-500 border border-slate-500/20'
+                                    }`}>
+                                        {email.tag}
+                                    </span>
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">
+                                        {email.aiConfidence}
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Email View & AI Response Studio */}
+                    <div className="lg:col-span-7 p-6 space-y-5 bg-black/[0.01] dark:bg-white/[0.01]">
+                        {/* Selected Email Card */}
+                        <div className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#161616] p-5 shadow-sm space-y-3">
+                            <div className="border-b border-black/5 dark:border-white/10 pb-3 space-y-1 text-xs">
+                                <div className="font-bold text-sm text-[#0F172A] dark:text-white">
+                                    {selectedEmail.subject}
+                                </div>
+                                <div className="text-[11px] text-[#64748B] dark:text-white/50 flex items-center justify-between">
+                                    <span>From: {selectedEmail.sender} &lt;{selectedEmail.email}&gt;</span>
+                                    <span className="font-mono">{selectedEmail.timestamp}</span>
+                                </div>
+                            </div>
+                            <div className="text-xs text-[#0F172A] dark:text-white/80 whitespace-pre-wrap leading-relaxed">
+                                {selectedEmail.fullMessage}
+                            </div>
+                        </div>
+
+                        {/* AI Suggested Reply */}
+                        <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-5 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Bot className="w-4 h-4 text-[#FF5C00]" />
+                                    <span className="text-xs font-bold uppercase tracking-wider text-[#FF5C00] font-heading">
+                                        FastMCP Suggested Response
+                                    </span>
+                                </div>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-semibold">
+                                    Human-in-the-loop Guardrail
+                                </span>
+                            </div>
+
+                            <div className="p-3.5 rounded-xl bg-white dark:bg-[#111] border border-black/5 dark:border-white/10 text-xs text-[#0F172A] dark:text-white/90 whitespace-pre-wrap leading-relaxed font-sans">
+                                {selectedEmail.suggestedReply}
+                            </div>
+
+                            {selectedEmail.priority !== 'filtered' && (
+                                <div className="flex items-center gap-3 pt-2">
+                                    <button
+                                        onClick={() => setIsApproved(true)}
+                                        disabled={isApproved}
+                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                                            isApproved
+                                                ? 'bg-emerald-500 text-white cursor-default'
+                                                : 'bg-[#FF5C00] text-white hover:bg-[#FF8C1A] shadow-md shadow-[#FF5C00]/20'
+                                        }`}
+                                    >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>{isApproved ? 'Approved & Dispatched via FastMCP' : '1-Click Approve & Send'}</span>
+                                    </button>
+                                </div>
                             )}
-                        </button>
+                        </div>
+
+                        {/* Repo Rules Link */}
+                        <div className="flex items-center justify-between text-xs text-[#64748B] dark:text-white/50 pt-2">
+                            <span className="font-mono flex items-center gap-1.5">
+                                <FileText className="w-3.5 h-3.5 text-[#FF5C00]" />
+                                <span>SliceInbox/agent_instructions.md</span>
+                            </span>
+                            <a
+                                href="https://github.com/A-Generative-Slice/SliceInbox/blob/main/agent_instructions.md"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[#FF5C00] hover:underline flex items-center gap-1 font-semibold"
+                            >
+                                <span>View Prompt & Rules</span>
+                                <ExternalLink className="w-3 h-3" />
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
