@@ -1,317 +1,294 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
-    Boxes, Zap, Bot, Cpu, GraduationCap, 
-    Presentation, FolderKanban, ArrowRight,
-    GitBranch, CheckCircle2, Send, ArrowUpRight
+    Search, X, ArrowUpRight, Boxes, Zap, 
+    Bot, Cpu, Presentation, FolderKanban, GraduationCap,
+    GitBranch, Command, Sparkles, ExternalLink
 } from 'lucide-react';
 import { detailedProducts } from '../data/productsData';
-import { submitForm, type LeadFormData } from '../utils/formSubmit';
+
+// Filter tags for rapid one-tap discovery
+const QUICK_FILTERS = [
+    { label: 'All Products', query: '' },
+    { label: '3D WebGL', query: '3d' },
+    { label: 'Lead Engine', query: 'leads' },
+    { label: 'Smart Outreach', query: 'outreach' },
+    { label: 'CRM Triage', query: 'inbox' },
+    { label: 'Boardroom PPT', query: 'presentation' },
+    { label: 'Document Vault', query: 'vault' },
+    { label: 'Studio LMS', query: 'lms' },
+] as const;
 
 export const HomePage: React.FC = () => {
-    // Form state for general scoping
-    const [formData, setFormData] = useState<LeadFormData>({
-        fullName: '',
-        email: '',
-        phone: '',
-        company: '',
-        category: 'General Architecture Review',
-        message: 'I would like to explore integrating A Generative Slice software products for our operations.',
-        website: '',
-        landline: '',
-        linkedIn: '',
-        instagram: ''
-    });
-    const [status, setStatus] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [activeFilter, setActiveFilter] = useState('All Products');
+    const searchInputRef = useRef<HTMLInputElement | null>(null);
 
-    const handleFormSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setStatus('sending');
+    // Global keyboard shortcut: Cmd+K / Ctrl+K or '/' to focus search
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            } else if (e.key === '/' && document.activeElement !== searchInputRef.current) {
+                e.preventDefault();
+                searchInputRef.current?.focus();
+            }
+        };
 
-        try {
-            await submitForm(formData, {
-                subject: `Platform Hub Inquiry: ${formData.category} from ${formData.fullName} (${formData.company || 'Direct'})`,
-                formType: 'Platform Hub Scoping'
-            });
-            setStatus('sent');
-        } catch {
-            setStatus('sent');
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Filter products based on search query
+    const filteredProducts = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return detailedProducts;
+
+        return detailedProducts.filter((product) => {
+            const searchableText = [
+                product.name,
+                product.category,
+                product.tagline,
+                product.description,
+                product.repoName,
+                product.badge,
+                ...product.specs.map(s => `${s.label} ${s.value}`),
+                ...product.features.map(f => `${f.title} ${f.description}`)
+            ].join(' ').toLowerCase();
+
+            return searchableText.includes(query);
+        });
+    }, [searchQuery]);
+
+    const getProductIcon = (id: string, className = "w-5 h-5 text-white") => {
+        switch (id) {
+            case 'slice-3d': return <Boxes className={className} />;
+            case 'slice-leads': return <Zap className={className} />;
+            case 'slice-mail': return <Bot className={className} />;
+            case 'slice-inbox': return <Cpu className={className} />;
+            case 'slice-ppt': return <Presentation className={className} />;
+            case 'slice-dam': return <FolderKanban className={className} />;
+            case 'slice-class': return <GraduationCap className={className} />;
+            default: return <Boxes className={className} />;
         }
-
-        setTimeout(() => setStatus('idle'), 6000);
     };
 
-    const getProductIcon = (id: string) => {
-        switch (id) {
-            case 'slice-3d': return <Boxes className="w-5 h-5 text-white" />;
-            case 'slice-leads': return <Zap className="w-5 h-5 text-white" />;
-            case 'slice-mail': return <Bot className="w-5 h-5 text-white" />;
-            case 'slice-inbox': return <Cpu className="w-5 h-5 text-white" />;
-            case 'slice-ppt': return <Presentation className="w-5 h-5 text-white" />;
-            case 'slice-dam': return <FolderKanban className="w-5 h-5 text-white" />;
-            case 'slice-class': return <GraduationCap className="w-5 h-5 text-white" />;
-            default: return <Boxes className="w-5 h-5 text-white" />;
-        }
+    const handleSelectFilter = (filterLabel: string, query: string) => {
+        setActiveFilter(filterLabel);
+        setSearchQuery(query);
+        searchInputRef.current?.focus();
+    };
+
+    const handleClearSearch = () => {
+        setSearchQuery('');
+        setActiveFilter('All Products');
+        searchInputRef.current?.focus();
     };
 
     return (
-        <div className="pt-24 sm:pt-28 pb-20 px-4 sm:px-6 max-w-6xl mx-auto space-y-16 sm:space-y-24">
-            {/* HERO SECTION: Minimal, Authoritative, Confident */}
-            <section className="text-center pt-6 sm:pt-10">
-                <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#FF5C00] font-heading mb-4">
-                    <span className="font-mono text-[#FF5C00]">|</span>
-                    <span>SOFTWARE SYSTEMS LABORATORY</span>
-                </div>
-
-                <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight leading-[1.12] max-w-3xl mx-auto">
-                    Proprietary Software Systems &amp; <span className="text-[#FF5C00]">Interactive Sandboxes</span>
-                </h1>
-
-                <p className="mt-5 text-sm sm:text-base text-[#64748B] dark:text-[#94A3B8] max-w-2xl mx-auto leading-relaxed">
-                    Direct browser sandboxes and technical benchmarks for 7 production systems engineered by A Generative Slice in Chennai, India.
-                </p>
-
-                {/* Minimal Status Strip */}
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-[11px] font-mono text-[#64748B] dark:text-white/50">
-                    <span className="px-2.5 py-1 rounded-md border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03]">
-                        7 Live Sandboxes
-                    </span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="px-2.5 py-1 rounded-md border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03]">
-                        Zero App Install
-                    </span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="px-2.5 py-1 rounded-md border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03]">
-                        Direct Browser Execution
-                    </span>
-                    <span className="hidden sm:inline">•</span>
-                    <span className="px-2.5 py-1 rounded-md border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.03]">
-                        Chennai, IN-TN
-                    </span>
-                </div>
-            </section>
-
-            {/* THE 7 INTERACTIVE WORKSPACES (Clean, Non-Repetitive Directory) */}
-            <section id="workspaces" className="scroll-mt-28 space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 border-b border-black/5 dark:border-white/10 pb-4">
-                    <div>
-                        <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#FF5C00] font-heading mb-1">
-                            <span className="font-mono text-[#FF5C00]">|</span>
-                            <span>INTERACTIVE WORKSPACES</span>
-                        </div>
-                        <h2 className="text-xl sm:text-3xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">
-                            Select a Software Sandbox
-                        </h2>
-                    </div>
-                    <span className="text-xs font-mono text-[#64748B] dark:text-white/40">
-                        Isolated Routes • Real-Time Controls
-                    </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {detailedProducts.map((product, idx) => (
-                        <div
-                            key={product.id}
-                            className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0c0f17] p-6 shadow-sm hover:border-[#FF5C00]/40 transition-all flex flex-col justify-between space-y-5 group"
-                        >
-                            <div className="space-y-4">
-                                {/* Card Header */}
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-xl bg-[#FF5C00] flex items-center justify-center shadow-sm">
-                                            {getProductIcon(product.id)}
-                                        </div>
-                                        <div>
-                                            <span className="font-mono text-[10px] text-[#64748B] dark:text-white/40 block">
-                                                0{idx + 1}
-                                            </span>
-                                            <h3 className="text-lg font-black text-[#0F172A] dark:text-white font-heading">
-                                                {product.name}
-                                            </h3>
-                                        </div>
-                                    </div>
-                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-white/60">
-                                        {product.badge}
-                                    </span>
-                                </div>
-
-                                <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                                    {product.tagline}
-                                </p>
-
-                                {/* Key Highlight Tag */}
-                                <div className="text-[11px] font-mono text-[#FF5C00] bg-[#FF5C00]/5 border border-[#FF5C00]/15 rounded-lg px-2.5 py-1">
-                                    {product.specs[0]?.label}: {product.specs[0]?.value}
-                                </div>
-                            </div>
-
-                            {/* Single Clean Action Link */}
-                            <div className="pt-4 border-t border-black/5 dark:border-white/5 flex items-center justify-between gap-3">
-                                <a
-                                    href={`https://github.com/A-Generative-Slice/${product.repoName}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-[11px] font-mono text-[#64748B] dark:text-white/50 hover:text-[#FF5C00] transition-colors flex items-center gap-1"
-                                    title="View Source on GitHub"
-                                >
-                                    <GitBranch className="w-3 h-3 text-[#FF5C00]" />
-                                    <span>{product.repoName}</span>
-                                </a>
-
-                                <Link
-                                    to={product.path}
-                                    className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm font-heading min-h-[42px]"
-                                >
-                                    <span>Launch Sandbox</span>
-                                    <ArrowRight className="w-3.5 h-3.5" />
-                                </Link>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
-
-            {/* MINIMAL CORPORATE STUDIO BRIDGE (Clean, 1 Card) */}
-            <section className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0c0f17] p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
-                <div className="space-y-1.5 max-w-xl">
-                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#FF5C00] font-bold block">
-                        | Corporate Headquarters
-                    </span>
-                    <h3 className="text-lg sm:text-xl font-black text-[#0F172A] dark:text-white font-heading">
-                        Looking for bespoke client engineering or advisory?
-                    </h3>
-                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8] leading-relaxed">
-                        A Generative Slice operates its primary corporate studio and client consulting headquarters at <span className="font-semibold text-[#0F172A] dark:text-white">agenerativeslice.com</span>.
-                    </p>
-                </div>
-
-                <a
-                    href="https://agenerativeslice.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="px-5 py-3 rounded-xl bg-black/5 dark:bg-white/10 hover:bg-[#FF5C00] text-[#0F172A] dark:text-white hover:text-white text-xs font-bold transition-all flex items-center gap-2 font-heading shrink-0 min-h-[46px]"
-                >
-                    <span>Visit Corporate Studio</span>
-                    <ArrowUpRight className="w-4 h-4" />
-                </a>
-            </section>
-
-            {/* MINIMAL INQUIRY / SCOPING FORM (Frictionless & Compact) */}
-            <section id="scoping-form" className="rounded-2xl border border-black/10 dark:border-white/10 bg-white dark:bg-[#0c0f17] p-6 sm:p-10 shadow-sm scroll-mt-28">
-                <div className="max-w-xl mx-auto mb-8 text-center space-y-1.5">
+        <div className="min-h-[82vh] flex flex-col justify-between pt-24 sm:pt-32 pb-16 px-4 sm:px-6 max-w-5xl mx-auto">
+            {/* HERO SECTION: Minimal, Modern Business Intro */}
+            <div className="space-y-8 sm:space-y-10 my-auto">
+                <div className="text-center space-y-4">
+                    {/* Editorial Kicker */}
                     <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#FF5C00] font-heading">
                         <span className="font-mono text-[#FF5C00]">|</span>
-                        <span>ARCHITECTURE REVIEW</span>
+                        <span>A GENERATIVE SLICE • SYSTEMS LABORATORY</span>
                     </div>
-                    <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">
-                        Deploy a Sandbox for Your Organization
-                    </h2>
-                    <p className="text-xs text-[#64748B] dark:text-[#94A3B8]">
-                        Inquire about licensing, tailoring, or hosting any of the 7 products.
+
+                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight leading-[1.12] max-w-2xl mx-auto">
+                        Explore Proprietary <span className="text-[#FF5C00]">Software Systems</span>
+                    </h1>
+
+                    <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] max-w-xl mx-auto leading-relaxed">
+                        Search and launch dedicated interactive sandboxes, WebGL runtimes, and autonomous agent tools engineered in Chennai, India.
                     </p>
                 </div>
 
-                <form onSubmit={handleFormSubmit} className="max-w-2xl mx-auto space-y-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white/80 mb-1.5 font-heading">
-                                Full Name *
-                            </label>
-                            <input
-                                type="text"
-                                required
-                                value={formData.fullName}
-                                onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                                placeholder="Mohammed Hussain"
-                                className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-[#f8fafc] dark:bg-[#111622] text-[#0F172A] dark:text-white text-base focus:border-[#FF5C00] focus:ring-1 focus:ring-[#FF5C00] outline-none transition-all min-h-[48px]"
-                            />
+                {/* SPOTLIGHT COMMAND SEARCH BAR */}
+                <div className="max-w-2xl mx-auto space-y-3">
+                    <div className="relative group">
+                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[#64748B] dark:text-white/40 group-focus-within:text-[#FF5C00] transition-colors">
+                            <Search className="w-5 h-5" />
                         </div>
 
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white/80 mb-1.5 font-heading">
-                                Work Email *
-                            </label>
-                            <input
-                                type="email"
-                                required
-                                value={formData.email}
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                placeholder="name@company.com"
-                                className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-[#f8fafc] dark:bg-[#111622] text-[#0F172A] dark:text-white text-base focus:border-[#FF5C00] focus:ring-1 focus:ring-[#FF5C00] outline-none transition-all min-h-[48px]"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white/80 mb-1.5 font-heading">
-                                Phone / WhatsApp *
-                            </label>
-                            <input
-                                type="tel"
-                                required
-                                value={formData.phone}
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                placeholder="+91 98400 00000"
-                                className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-[#f8fafc] dark:bg-[#111622] text-[#0F172A] dark:text-white text-base focus:border-[#FF5C00] focus:ring-1 focus:ring-[#FF5C00] outline-none transition-all min-h-[48px]"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white/80 mb-1.5 font-heading">
-                                Product of Interest
-                            </label>
-                            <select
-                                value={formData.category}
-                                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                                className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-[#f8fafc] dark:bg-[#111622] text-[#0F172A] dark:text-white text-base focus:border-[#FF5C00] focus:ring-1 focus:ring-[#FF5C00] outline-none transition-all min-h-[48px]"
-                            >
-                                <option value="General Architecture Review">All Systems Review</option>
-                                <option value="Slice3D (Spatial WebGL)">Slice3D — 3D WebGL Viewer</option>
-                                <option value="SliceLeads (Lead Engine)">SliceLeads — B2B Lead Intelligence</option>
-                                <option value="SliceMail (AI Outreach)">SliceMail — Automated Email Engine</option>
-                                <option value="SliceInbox (Omnichannel CRM)">SliceInbox — FastMCP CRM Triage</option>
-                                <option value="SlicePPT (Deck Engine)">SlicePPT — Automated Slide Generator</option>
-                                <option value="SliceDAM (Digital Assets)">SliceDAM — Document Vault</option>
-                                <option value="SliceClass (Studio LMS)">SliceClass — Monochromatic LMS</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold uppercase tracking-wider text-[#0F172A] dark:text-white/80 mb-1.5 font-heading">
-                            Requirements Brief
-                        </label>
-                        <textarea
-                            rows={3}
-                            value={formData.message}
-                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
-                            placeholder="Describe your use case or infrastructure requirements..."
-                            className="w-full px-4 py-3 rounded-xl border border-black/10 dark:border-white/10 bg-[#f8fafc] dark:bg-[#111622] text-[#0F172A] dark:text-white text-base focus:border-[#FF5C00] focus:ring-1 focus:ring-[#FF5C00] outline-none transition-all resize-none"
+                        <input
+                            ref={searchInputRef}
+                            type="text"
+                            value={searchQuery}
+                            onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                setActiveFilter('');
+                            }}
+                            placeholder="Search products, technologies, or keywords (e.g. 3D WebGL, leads, email, CRM)..."
+                            className="w-full pl-12 pr-24 py-4 sm:py-4.5 rounded-2xl border-2 border-black/10 dark:border-white/10 bg-white/90 dark:bg-[#0c0f17]/90 text-[#0F172A] dark:text-white placeholder-[#64748B]/60 text-sm sm:text-base font-medium shadow-xl backdrop-blur-xl focus:border-[#FF5C00] focus:ring-4 focus:ring-[#FF5C00]/10 outline-none transition-all"
+                            autoComplete="off"
+                            spellCheck={false}
                         />
+
+                        {/* Right Shortcuts / Clear Button */}
+                        <div className="absolute inset-y-0 right-3.5 flex items-center gap-1.5">
+                            {searchQuery ? (
+                                <button
+                                    onClick={handleClearSearch}
+                                    className="p-1.5 rounded-lg text-[#64748B] dark:text-white/50 hover:text-[#0F172A] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                                    title="Clear search"
+                                    aria-label="Clear search input"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            ) : (
+                                <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md border border-black/10 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04] text-[10px] font-mono text-[#64748B] dark:text-white/40">
+                                    <Command className="w-3 h-3" />
+                                    <span>K</span>
+                                </div>
+                            )}
+                        </div>
                     </div>
 
-                    <button
-                        type="submit"
-                        disabled={status === 'sending'}
-                        className="w-full py-4 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-sm font-bold shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 min-h-[50px] font-heading"
+                    {/* Quick Category Chips */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 touch-scroll no-scrollbar">
+                        {QUICK_FILTERS.map((filter) => {
+                            const isSelected = activeFilter === filter.label || (filter.query === '' && searchQuery === '');
+                            return (
+                                <button
+                                    key={filter.label}
+                                    onClick={() => handleSelectFilter(filter.label, filter.query)}
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                                        isSelected
+                                            ? 'bg-[#FF5C00] text-white shadow-sm'
+                                            : 'bg-white/80 dark:bg-[#0c0f17]/80 border border-black/5 dark:border-white/10 text-[#64748B] dark:text-white/70 hover:border-[#FF5C00]/40'
+                                    }`}
+                                >
+                                    {filter.label}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* LIVE SEARCH RESULTS & PRODUCT DIRECTORY */}
+                <div className="max-w-3xl mx-auto space-y-3">
+                    <div className="flex items-center justify-between text-xs font-mono text-[#64748B] dark:text-white/40 px-1">
+                        <span>
+                            {filteredProducts.length} {filteredProducts.length === 1 ? 'Product Sandbox' : 'Product Sandboxes'}
+                        </span>
+                        <span>Click to launch full experience in new tab</span>
+                    </div>
+
+                    {filteredProducts.length > 0 ? (
+                        <div className="space-y-3">
+                            {filteredProducts.map((product) => (
+                                <div
+                                    key={product.id}
+                                    className="p-4 sm:p-5 rounded-2xl border border-black/10 dark:border-white/10 bg-white/90 dark:bg-[#0c0f17]/90 shadow-sm hover:border-[#FF5C00]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                                >
+                                    {/* Left: Icon & Meta */}
+                                    <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
+                                        <div className="w-11 h-11 rounded-xl bg-[#FF5C00] flex items-center justify-center shadow-sm shrink-0">
+                                            {getProductIcon(product.id)}
+                                        </div>
+
+                                        <div className="space-y-1 min-w-0 flex-1">
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                                <h3 className="font-extrabold text-base text-[#0F172A] dark:text-white font-heading">
+                                                    {product.name}
+                                                </h3>
+                                                <span className="text-[10px] font-mono uppercase tracking-wider text-[#FF5C00] font-bold">
+                                                    | {product.category}
+                                                </span>
+                                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-white/60">
+                                                    {product.badge}
+                                                </span>
+                                            </div>
+
+                                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-1">
+                                                {product.tagline}
+                                            </p>
+
+                                            <div className="text-[11px] font-mono text-[#64748B] dark:text-white/40 flex items-center gap-2 pt-0.5">
+                                                <span className="text-[#FF5C00] font-medium">{product.specs[0]?.label}: {product.specs[0]?.value}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Right: Actions */}
+                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                        <a
+                                            href={`https://github.com/A-Generative-Slice/${product.repoName}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-3 py-2 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-xs font-mono text-[#64748B] dark:text-white/60 hover:text-[#FF5C00] hover:border-[#FF5C00]/30 transition-all flex items-center gap-1.5 min-h-[42px]"
+                                            title="View GitHub Repository"
+                                        >
+                                            <GitBranch className="w-3.5 h-3.5 text-[#FF5C00]" />
+                                            <span className="hidden md:inline">{product.repoName}</span>
+                                        </a>
+
+                                        {/* Open in New Tab for full product experience with trial & templates */}
+                                        <a
+                                            href={product.path}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm font-heading min-h-[42px]"
+                                            title={`Open ${product.name} interactive sandbox in new tab`}
+                                        >
+                                            <span>Launch Full Experience</span>
+                                            <ArrowUpRight className="w-4 h-4" />
+                                        </a>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-12 px-6 rounded-2xl border border-dashed border-black/10 dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.01] space-y-3">
+                            <Sparkles className="w-8 h-8 text-[#FF5C00] mx-auto opacity-60" />
+                            <h4 className="font-bold text-sm text-[#0F172A] dark:text-white font-heading">
+                                No software sandboxes found matching "{searchQuery}"
+                            </h4>
+                            <p className="text-xs text-[#64748B] dark:text-white/50 max-w-sm mx-auto">
+                                Try searching for "3D", "leads", "email", "CRM", "slides", "vault", or "LMS".
+                            </p>
+                            <button
+                                onClick={handleClearSearch}
+                                className="px-4 py-2 rounded-xl bg-[#FF5C00] text-white text-xs font-bold hover:bg-[#FF8C1A] transition-all cursor-pointer"
+                            >
+                                Reset Search Filter
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* MINIMAL FOOTER BRIDGE: Single Clean Line */}
+            <div className="pt-8 border-t border-black/5 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B] dark:text-white/40">
+                <div className="flex items-center gap-2">
+                    <span className="font-semibold text-[#0F172A] dark:text-white">A Generative Slice</span>
+                    <span>•</span>
+                    <span>Corporate Studio at</span>
+                    <a
+                        href="https://agenerativeslice.com"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#FF5C00] hover:underline font-bold inline-flex items-center gap-1"
                     >
-                        {status === 'sending' ? (
-                            <span>Submitting Review Request...</span>
-                        ) : status === 'sent' ? (
-                            <span className="flex items-center gap-2">
-                                <CheckCircle2 className="w-4 h-4" />
-                                Review Request Received — Response within 24h
-                            </span>
-                        ) : (
-                            <span className="flex items-center gap-2">
-                                <Send className="w-4 h-4" />
-                                Submit Architecture Inquiry
-                            </span>
-                        )}
-                    </button>
-                </form>
-            </section>
+                        <span>agenerativeslice.com</span>
+                        <ExternalLink className="w-3 h-3" />
+                    </a>
+                </div>
+
+                <div className="flex items-center gap-3 font-mono text-[11px]">
+                    <a
+                        href="https://github.com/A-Generative-Slice"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-[#FF5C00] transition-colors flex items-center gap-1"
+                    >
+                        <GitBranch className="w-3.5 h-3.5 text-[#FF5C00]" />
+                        <span>github.com/A-Generative-Slice</span>
+                    </a>
+                </div>
+            </div>
         </div>
     );
 };
