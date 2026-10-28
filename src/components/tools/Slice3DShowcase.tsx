@@ -2,18 +2,15 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { 
-    Send, Paperclip, Image as ImageIcon, Bot, User, Sparkles, 
-    Trash2, Box, Scissors, Camera, 
-    Share2, CheckCircle2, FolderPlus,
-    X
+    Menu, X, Send, Paperclip, Sparkles, 
+    Trash2, Box, Camera, CheckCircle2, 
+    ArrowRight, RotateCcw, 
+    Calculator, Bot, Layers, 
+    Plus, Upload, ShieldCheck
 } from 'lucide-react';
 import logoImg from '../../assets/logo.jpg';
-import { RepoSyncBar } from '../RepoSyncBar';
 
-export type ViewportMode = 'pbr' | 'clay' | 'wireframe';
-export type ActiveView = 'studio' | 'vault' | 'boq';
-
-// Custom / Stored 3D Asset Definition
+// Types
 export interface StoredAsset {
     id: string;
     name: string;
@@ -26,1145 +23,1298 @@ export interface StoredAsset {
     isCustom?: boolean;
 }
 
-// Initial Default Asset Vault Items
-const DEFAULT_ASSETS: StoredAsset[] = [
-    {
-        id: 'asset_bed_teak',
-        name: 'Executive Teak King Bed',
-        category: 'Bedroom',
-        priceINR: 48000,
-        dimensions: '2.0m × 1.8m',
-        fileName: 'teak_king_bed.glb',
-        fileSizeKB: 38,
-        color: '#854D0E'
-    },
-    {
-        id: 'asset_sofa_fluted',
-        name: 'Fluted Velvet 3-Seater Sofa',
-        category: 'Living',
-        priceINR: 36000,
-        dimensions: '2.2m × 0.9m',
-        fileName: 'fluted_sofa.glb',
-        fileSizeKB: 42,
-        color: '#FF5C00'
-    },
-    {
-        id: 'asset_dining_oak',
-        name: 'Minimalist White Oak Dining Table',
-        category: 'Dining',
-        priceINR: 28500,
-        dimensions: '1.8m × 0.9m',
-        fileName: 'white_oak_table.glb',
-        fileSizeKB: 29,
-        color: '#D97706'
-    },
-    {
-        id: 'asset_workstation',
-        name: 'Dual-Screen Ergonomic Desk',
-        category: 'Office',
-        priceINR: 22000,
-        dimensions: '1.5m × 0.75m',
-        fileName: 'executive_desk.glb',
-        fileSizeKB: 34,
-        color: '#1E293B'
-    },
-    {
-        id: 'asset_luminaire',
-        name: 'Recessed 3000K Architectural Lights',
-        category: 'Lighting',
-        priceINR: 14500,
-        dimensions: '90mm diameter',
-        fileName: 'luminaire_pack.glb',
-        fileSizeKB: 18,
-        color: '#F59E0B'
-    }
-];
-
-// Placed 3D Object in the scene
-interface PlacedObject {
-    instanceId: string;
-    asset: StoredAsset;
+export interface PlacedFurniture {
+    id: string;
+    assetId: string;
+    name: string;
+    category: string;
+    priceINR: number;
     position: [number, number, number];
+    rotationY: number;
+    dimensions: [number, number, number];
+    color: string;
 }
 
-// Chat Message Interface
-interface ChatMessage {
+export interface ChatMessage {
     id: string;
-    sender: 'user' | 'assistant';
+    sender: 'user' | 'ai';
     text: string;
     timestamp: string;
-    attachedImage?: string;
-    actionBadge?: string;
+    floorPlanUrl?: string;
+    floorPlanName?: string;
+    actionApplied?: string;
 }
 
-export const Slice3DShowcase: React.FC = () => {
-    // Top-level View: Studio (Canvas + Chat), Vault (Product Adding), BOQ
-    const [currentView, setCurrentView] = useState<ActiveView>('studio');
+export interface SpacePreset {
+    id: string;
+    title: string;
+    subtitle: string;
+    prompt: string;
+    areaSqFt: number;
+    dimensions: string;
+}
 
-    // Canvas container ref
-    const containerRef = useRef<HTMLDivElement | null>(null);
-    const canvasContainerRef = useRef<HTMLDivElement | null>(null);
-    const chatEndRef = useRef<HTMLDivElement | null>(null);
-    const floorPlanFileInputRef = useRef<HTMLInputElement | null>(null);
-    const customAssetFileInputRef = useRef<HTMLInputElement | null>(null);
+// Preset Catalog of Chennai Modern Interior Products
+const DEFAULT_VAULT_ASSETS: StoredAsset[] = [
+    { id: 'ast-1', name: 'Curved Bouclé Sectional Sofa', category: 'Seating', priceINR: 48500, dimensions: '2600 x 950 x 780 mm', fileName: 'boucle_sectional.glb', fileSizeKB: 2420, color: '#e2e8f0' },
+    { id: 'ast-2', name: 'Walnut & Travertine Coffee Table', category: 'Tables', priceINR: 18200, dimensions: '1200 x 600 x 420 mm', fileName: 'walnut_coffee_tab.glb', fileSizeKB: 1180, color: '#78350f' },
+    { id: 'ast-3', name: 'Minimalist Oak Workstation Desk', category: 'Office', priceINR: 22000, dimensions: '1500 x 750 x 750 mm', fileName: 'oak_desk_ergonomic.glb', fileSizeKB: 1450, color: '#d97706' },
+    { id: 'ast-4', name: 'Herman Miller Style Mesh Chair', category: 'Office', priceINR: 19500, dimensions: '650 x 650 x 1050 mm', fileName: 'ergonomic_task_chair.glb', fileSizeKB: 980, color: '#334155' },
+    { id: 'ast-5', name: 'Floating Wall Media Console', category: 'Storage', priceINR: 26000, dimensions: '2100 x 400 x 450 mm', fileName: 'floating_media_unit.glb', fileSizeKB: 1320, color: '#1e293b' },
+    { id: 'ast-6', name: 'Monolithic Dining Table (6-Seater)', category: 'Dining', priceINR: 36000, dimensions: '1800 x 900 x 760 mm', fileName: 'monolithic_dining.glb', fileSizeKB: 1840, color: '#475569' }
+];
 
-    // Three.js internal object refs
-    const threeRefs = useRef<{
-        scene: THREE.Scene;
-        camera: THREE.PerspectiveCamera;
-        renderer: THREE.WebGLRenderer;
-        controls: OrbitControls;
-        roomGroup: THREE.Group;
-        furnitureGroup: THREE.Group;
-        clippingPlane: THREE.Plane;
-        clippingPlaneHelper: THREE.PlaneHelper | null;
-        animFrameId: number;
-    } | null>(null);
+const RECENT_SPACES: SpacePreset[] = [
+    { id: 'spc-1', title: 'Contemporary 2BHK Living', subtitle: 'Open layout • Chennai Apartment', prompt: 'Reconstruct modern 2BHK living room with sectional sofa, walnut coffee table, and media unit', areaSqFt: 620, dimensions: '7.5m x 6.0m' },
+    { id: 'spc-2', title: 'Executive Studio & Office', subtitle: 'Workstations • Meeting zone', prompt: 'Add 2 oak workstations with ergonomic chairs, conference hub, and lounge seating', areaSqFt: 480, dimensions: '6.0m x 5.2m' },
+    { id: 'spc-3', title: 'Scandinavian Minimal Studio', subtitle: 'Neutral tones • Open kitchen', prompt: 'Scandinavian open-plan studio with dining nook and modular storage', areaSqFt: 540, dimensions: '6.8m x 5.5m' },
+    { id: 'spc-4', title: 'Luxury Villa Master Suite', subtitle: 'Spacious • Ambient lighting', prompt: 'Luxury master bedroom suite with king bed, dressing area, and accent armchairs', areaSqFt: 720, dimensions: '8.0m x 6.5m' }
+];
 
-    // Viewport Mode & Slicing State
-    const [viewportMode, setViewportMode] = useState<ViewportMode>('pbr');
-    const [sliceEnabled, setSliceEnabled] = useState<boolean>(false);
-    const [sliceHeight, setSliceHeight] = useState<number>(1.8); // 0 to 3.5m
-    const [fps, setFps] = useState<number>(60);
-    const [polyCount, setPolyCount] = useState<number>(1840);
+export function Slice3DShowcase() {
+    // Left Drawer (Gemini style)
+    const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+    
+    // Modals
+    const [activeModal, setActiveModal] = useState<'vault' | 'boq' | 'specs' | 'history' | null>(null);
 
-    // Asset Vault (Stored Products) - LocalStorage backed
-    const [assetVault, setAssetVault] = useState<StoredAsset[]>(() => {
-        try {
-            const saved = localStorage.getItem('slice3d_asset_vault');
-            return saved ? JSON.parse(saved) : DEFAULT_ASSETS;
-        } catch {
-            return DEFAULT_ASSETS;
-        }
-    });
+    // Camera view mode (3D isometric vs 2D top-down)
+    const [cameraMode, setCameraMode] = useState<'3d' | 'top'>('3d');
 
-    // New Asset Modal / Upload State
-    const [newAssetName, setNewAssetName] = useState('');
-    const [newAssetCategory, setNewAssetCategory] = useState('Living');
-    const [newAssetPrice, setNewAssetPrice] = useState('32000');
-    const [newAssetFile, setNewAssetFile] = useState<File | null>(null);
-    const [isAddingAsset, setIsAddingAsset] = useState(false);
-
-    // Placed 3D Objects in Current Floor
-    const [placedObjects, setPlacedObjects] = useState<PlacedObject[]>([
-        {
-            instanceId: 'inst_1',
-            asset: DEFAULT_ASSETS[0],
-            position: [-2.4, 0.4, -1.8]
-        },
-        {
-            instanceId: 'inst_2',
-            asset: DEFAULT_ASSETS[1],
-            position: [2.2, 0.35, 1.2]
-        },
-        {
-            instanceId: 'inst_3',
-            asset: DEFAULT_ASSETS[4],
-            position: [0, 2.7, 0]
-        }
-    ]);
-
-    // Active Room Floor Plan Dimensions (Extruded procedurally)
-    const [roomDims, setRoomDims] = useState<{ name: string; w: number; d: number; h: number }>({
-        name: 'Modern 2BHK Spatial Plan',
-        w: 12,
-        d: 10,
-        h: 2.8
-    });
-
-    // Chat Environment State
+    // Chat / AI Co-Pilot State
     const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
         {
-            id: 'msg_1',
-            sender: 'assistant',
-            text: 'Welcome to Slice3D! I can construct 3D environments from 2D floor plan images, stage custom assets from your vault, and calculate live Bill of Quantities. How would you like to build your space?',
+            id: 'init-msg',
+            sender: 'ai',
+            text: 'Welcome to Slice3D. I am your Spatial AI Co-Pilot. Attach a 2D floor plan image or describe your dream space, and I will construct the 3D room in real-time.',
             timestamp: 'Just now'
         }
     ]);
-    const [promptInput, setPromptInput] = useState('');
-    const [attachedFloorImage, setAttachedFloorImage] = useState<string | null>(null);
-    const [isAiProcessing, setIsAiProcessing] = useState(false);
+    const [inputPrompt, setInputPrompt] = useState('');
+    const [isAiThinking, setIsAiThinking] = useState(false);
+    const [attachedFloorPlan, setAttachedFloorPlan] = useState<{ url: string; name: string } | null>(null);
 
-    // Save Asset Vault to localStorage
+    // Active Room Specifications
+    const [roomSpecs, setRoomSpecs] = useState({
+        name: 'Contemporary 2BHK Living',
+        width: 7.5,
+        depth: 6.0,
+        height: 2.8,
+        areaSqFt: 620
+    });
+
+    // 3D Asset Vault (localStorage persistence)
+    const [assetVault, setAssetVault] = useState<StoredAsset[]>(() => {
+        try {
+            const saved = localStorage.getItem('slice3d_asset_vault');
+            return saved ? JSON.parse(saved) : DEFAULT_VAULT_ASSETS;
+        } catch {
+            return DEFAULT_VAULT_ASSETS;
+        }
+    });
+
+    // Active Furniture in 3D scene
+    const [furnitureList, setFurnitureList] = useState<PlacedFurniture[]>([
+        { id: 'f-1', assetId: 'ast-1', name: 'Curved Bouclé Sectional Sofa', category: 'Seating', priceINR: 48500, position: [-1.2, 0.4, 0.5], rotationY: 0, dimensions: [2.6, 0.78, 0.95], color: '#e2e8f0' },
+        { id: 'f-2', assetId: 'ast-2', name: 'Walnut & Travertine Coffee Table', category: 'Tables', priceINR: 18200, position: [-1.2, 0.22, -0.6], rotationY: 0, dimensions: [1.2, 0.42, 0.6], color: '#78350f' },
+        { id: 'f-3', assetId: 'ast-5', name: 'Floating Wall Media Console', category: 'Storage', priceINR: 26000, position: [-1.2, 0.25, -2.7], rotationY: 0, dimensions: [2.1, 0.45, 0.4], color: '#1e293b' },
+        { id: 'f-4', assetId: 'ast-6', name: 'Monolithic Dining Table (6-Seater)', category: 'Dining', priceINR: 36000, position: [2.0, 0.38, 0.8], rotationY: 1.57, dimensions: [1.8, 0.76, 0.9], color: '#475569' }
+    ]);
+
+    // New 3D Asset Form State
+    const [newAssetName, setNewAssetName] = useState('');
+    const [newAssetCategory, setNewAssetCategory] = useState('Seating');
+    const [newAssetPrice, setNewAssetPrice] = useState('24000');
+    const [newAssetDims, setNewAssetDims] = useState('1200 x 800 x 750 mm');
+    const [newAssetFile, setNewAssetFile] = useState<File | null>(null);
+
+    // Three.js References
+    const canvasContainerRef = useRef<HTMLDivElement>(null);
+    const sceneRef = useRef<THREE.Scene | null>(null);
+    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+    const controlsRef = useRef<OrbitControls | null>(null);
+    const roomGroupRef = useRef<THREE.Group | null>(null);
+    const furnitureGroupRef = useRef<THREE.Group | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const modelUploadInputRef = useRef<HTMLInputElement>(null);
+
+    // Sync vault to localStorage
     useEffect(() => {
         try {
             localStorage.setItem('slice3d_asset_vault', JSON.stringify(assetVault));
-        } catch {}
+        } catch {
+            // storage quota fallback
+        }
     }, [assetVault]);
 
-    // Auto-scroll chat to bottom
-    useEffect(() => {
-        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, [chatMessages]);
+    // Financial Calculation for BOQ
+    const boqSubtotal = furnitureList.reduce((sum, item) => sum + item.priceINR, 0);
+    const gstRate = 0.18; // 18% GST (CGST 9% + SGST 9%)
+    const gstAmount = Math.round(boqSubtotal * gstRate);
+    const boqGrandTotal = boqSubtotal + gstAmount;
 
-    // -------------------------------------------------------------
-    // Procedural Furniture Mesh Generator
-    // -------------------------------------------------------------
-    const createFurnitureMesh = (asset: StoredAsset): THREE.Group => {
-        const group = new THREE.Group();
-        group.name = `Placed_${asset.id}`;
-
-        const mat = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(asset.color),
-            roughness: 0.35,
-            metalness: 0.15
-        });
-
-        if (asset.category.toLowerCase().includes('bed')) {
-            const base = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.4, 1.8), mat);
-            base.castShadow = true;
-            group.add(base);
-
-            const head = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.1, 1.8), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 }));
-            head.position.set(-1.0, 0.35, 0);
-            head.castShadow = true;
-            group.add(head);
-        } else if (asset.category.toLowerCase().includes('sofa') || asset.category.toLowerCase().includes('living')) {
-            const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.35, 0.9), mat);
-            seat.castShadow = true;
-            group.add(seat);
-
-            const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.25), mat);
-            back.position.set(0, 0.35, -0.35);
-            group.add(back);
-        } else if (asset.category.toLowerCase().includes('dining') || asset.category.toLowerCase().includes('table')) {
-            const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.9), mat);
-            top.position.y = 0.35;
-            group.add(top);
-
-            const legMat = new THREE.MeshStandardMaterial({ color: 0x0F172A });
-            [[-0.8, -0.35], [0.8, -0.35], [-0.8, 0.35], [0.8, 0.35]].forEach(([lx, lz]) => {
-                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7), legMat);
-                leg.position.set(lx, 0, lz);
-                group.add(leg);
-            });
-        } else if (asset.category.toLowerCase().includes('light')) {
-            const pendant = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.35, 16), new THREE.MeshStandardMaterial({
-                color: 0xF59E0B,
-                emissive: 0xFF5C00,
-                emissiveIntensity: 0.8
-            }));
-            pendant.rotation.x = Math.PI;
-            group.add(pendant);
-        } else {
-            const box = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.75), mat);
-            box.castShadow = true;
-            group.add(box);
-        }
-
-        return group;
-    };
-
-    // -------------------------------------------------------------
-    // Rebuild Room & Placed Objects
-    // -------------------------------------------------------------
-    const buildRoom = useCallback(() => {
-        const three = threeRefs.current;
-        if (!three) return;
-
-        // Clear room group
-        while (three.roomGroup.children.length > 0) {
-            three.roomGroup.remove(three.roomGroup.children[0]);
-        }
-
-        // 1. Floor Slab
-        const floorGeom = new THREE.BoxGeometry(roomDims.w, 0.15, roomDims.d);
-        const floorMat = new THREE.MeshStandardMaterial({
-            color: 0xF8FAFC,
-            roughness: 0.2,
-            metalness: 0.05
-        });
-        const floorMesh = new THREE.Mesh(floorGeom, floorMat);
-        floorMesh.position.y = -0.075;
-        floorMesh.receiveShadow = true;
-        three.roomGroup.add(floorMesh);
-
-        // 2. Extruded Outer Walls
-        const wallMat = new THREE.MeshStandardMaterial({
-            color: 0xE2E8F0,
-            roughness: 0.85,
-            metalness: 0.05
-        });
-
-        const halfW = roomDims.w / 2;
-        const halfD = roomDims.d / 2;
-        const wallH = roomDims.h;
-        const wallT = 0.28;
-
-        const wallConfigs = [
-            // North wall
-            { pos: [0, wallH / 2, -halfD], size: [roomDims.w, wallH, wallT] },
-            // South wall
-            { pos: [0, wallH / 2, halfD], size: [roomDims.w, wallH, wallT] },
-            // West wall
-            { pos: [-halfW, wallH / 2, 0], size: [wallT, wallH, roomDims.d] },
-            // East wall
-            { pos: [halfW, wallH / 2, 0], size: [wallT, wallH, roomDims.d] },
-            // Interior partition
-            { pos: [0, wallH / 2, 0], size: [wallT, wallH, roomDims.d * 0.6] }
-        ];
-
-        wallConfigs.forEach(w => {
-            const mesh = new THREE.Mesh(
-                new THREE.BoxGeometry(w.size[0], w.size[1], w.size[2]),
-                wallMat
-            );
-            mesh.position.set(w.pos[0], w.pos[1], w.pos[2]);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            three.roomGroup.add(mesh);
-        });
-
-        // 3. Render Placed Objects from Vault
-        while (three.furnitureGroup.children.length > 0) {
-            three.furnitureGroup.remove(three.furnitureGroup.children[0]);
-        }
-
-        placedObjects.forEach(p => {
-            const mesh = createFurnitureMesh(p.asset);
-            mesh.position.set(p.position[0], p.position[1], p.position[2]);
-            three.furnitureGroup.add(mesh);
-        });
-
-        setPolyCount(wallConfigs.length * 12 + placedObjects.length * 52 + 24);
-    }, [roomDims, placedObjects]);
-
-    // -------------------------------------------------------------
-    // Initialize Three.js WebGL Engine
-    // -------------------------------------------------------------
+    // -------------------------------------------------------------------------
+    // Three.js Scene Setup & Render Loop
+    // -------------------------------------------------------------------------
     useEffect(() => {
         const container = canvasContainerRef.current;
         if (!container) return;
 
-        const width = container.clientWidth;
-        const height = container.clientHeight || 500;
+        const width = container.clientWidth || window.innerWidth;
+        const height = container.clientHeight || window.innerHeight;
 
+        // 1. Scene
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-        camera.position.set(9, 8, 11);
+        scene.background = new THREE.Color(0xf8fafc);
+        sceneRef.current = scene;
 
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true,
-            powerPreference: 'high-performance',
-            preserveDrawingBuffer: true
-        });
+        // 2. Camera
+        const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 100);
+        camera.position.set(11, 9, 13);
+        camera.lookAt(0, 0.5, 0);
+        cameraRef.current = camera;
+
+        // 3. Renderer
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.1;
-        renderer.localClippingEnabled = true;
+        renderer.toneMappingExposure = 1.05;
 
+        // Clean any old canvas
+        while (container.firstChild) {
+            container.removeChild(container.firstChild);
+        }
         container.appendChild(renderer.domElement);
+        rendererRef.current = renderer;
 
+        // 4. OrbitControls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxDistance = 45;
-        controls.minDistance = 1.2;
-        controls.maxPolarAngle = Math.PI / 2 + 0.02;
+        controls.maxPolarAngle = Math.PI / 2 - 0.02; // Do not go underneath floor
+        controls.minDistance = 4;
+        controls.maxDistance = 30;
+        controls.target.set(0, 0.5, 0);
+        controlsRef.current = controls;
 
-        // Clean Studio Lights
-        const ambient = new THREE.AmbientLight(0xffffff, 1.4);
-        scene.add(ambient);
+        // 5. Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.85);
+        scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xfff7ed, 2.6);
-        dirLight.position.set(12, 18, 14);
-        dirLight.castShadow = true;
-        scene.add(dirLight);
+        const sunLight = new THREE.DirectionalLight(0xfff7ed, 1.4);
+        sunLight.position.set(14, 18, 12);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 2048;
+        sunLight.shadow.mapSize.height = 2048;
+        sunLight.shadow.bias = -0.0001;
+        sunLight.shadow.camera.near = 0.5;
+        sunLight.shadow.camera.far = 40;
+        sunLight.shadow.camera.left = -10;
+        sunLight.shadow.camera.right = 10;
+        sunLight.shadow.camera.top = 10;
+        sunLight.shadow.camera.bottom = -10;
+        scene.add(sunLight);
 
-        const rimLight = new THREE.PointLight(0xFF5C00, 1.5, 30);
-        rimLight.position.set(-12, 8, -12);
-        scene.add(rimLight);
+        const fillLight = new THREE.DirectionalLight(0xe0f2fe, 0.45);
+        fillLight.position.set(-12, 10, -10);
+        scene.add(fillLight);
 
-        // Ground Cadmium Grid
-        const grid = new THREE.GridHelper(22, 44, 0xFF5C00, 0xCBD5E1);
-        grid.position.y = -0.16;
-        scene.add(grid);
-
-        // Dynamic Slicing Plane
-        const clippingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), sliceHeight);
-        const clippingPlaneHelper = new THREE.PlaneHelper(clippingPlane, 16, 0xFF5C00);
-        clippingPlaneHelper.visible = false;
-        scene.add(clippingPlaneHelper);
-
+        // 6. Architectural Groups
         const roomGroup = new THREE.Group();
         scene.add(roomGroup);
+        roomGroupRef.current = roomGroup;
 
         const furnitureGroup = new THREE.Group();
         scene.add(furnitureGroup);
+        furnitureGroupRef.current = furnitureGroup;
 
-        threeRefs.current = {
-            scene,
-            camera,
-            renderer,
-            controls,
-            roomGroup,
-            furnitureGroup,
-            clippingPlane,
-            clippingPlaneHelper,
-            animFrameId: 0
+        // 7. Ground Plane / Floor Grid
+        const grid = new THREE.GridHelper(30, 30, 0xe2e8f0, 0xf1f5f9);
+        grid.position.y = -0.01;
+        scene.add(grid);
+
+        // Resize Listener
+        const handleResize = () => {
+            if (!container || !rendererRef.current || !cameraRef.current) return;
+            const w = container.clientWidth || window.innerWidth;
+            const h = container.clientHeight || window.innerHeight;
+            cameraRef.current.aspect = w / h;
+            cameraRef.current.updateProjectionMatrix();
+            rendererRef.current.setSize(w, h);
         };
+        window.addEventListener('resize', handleResize);
 
-        let frameCount = 0;
-        let lastTime = performance.now();
-
-        const animate = (now: number) => {
-            threeRefs.current!.animFrameId = requestAnimationFrame(animate);
-            frameCount++;
-            if (now - lastTime >= 500) {
-                setFps(Math.round((frameCount * 1000) / (now - lastTime)));
-                frameCount = 0;
-                lastTime = now;
-            }
+        // Animation Loop
+        let animationFrameId: number;
+        const animate = () => {
+            animationFrameId = requestAnimationFrame(animate);
             controls.update();
             renderer.render(scene, camera);
         };
-        animate(performance.now());
-
-        const resizeObserver = new ResizeObserver(() => {
-            if (!container) return;
-            const newW = container.clientWidth;
-            const newH = container.clientHeight || 500;
-            camera.aspect = newW / newH;
-            camera.updateProjectionMatrix();
-            renderer.setSize(newW, newH);
-        });
-        resizeObserver.observe(container);
-
-        buildRoom();
+        animate();
 
         return () => {
-            resizeObserver.disconnect();
-            if (threeRefs.current) {
-                cancelAnimationFrame(threeRefs.current.animFrameId);
-                renderer.dispose();
-                if (container.contains(renderer.domElement)) {
-                    container.removeChild(renderer.domElement);
-                }
+            window.removeEventListener('resize', handleResize);
+            cancelAnimationFrame(animationFrameId);
+            renderer.dispose();
+            if (container.contains(renderer.domElement)) {
+                container.removeChild(renderer.domElement);
             }
         };
-    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    }, []);
 
-    // Rebuild room when roomDims or placedObjects change
-    useEffect(() => {
-        buildRoom();
-    }, [buildRoom]);
+    // -------------------------------------------------------------------------
+    // Reconstruct Room Geometry (Walls, Doors, Floor)
+    // -------------------------------------------------------------------------
+    const rebuildRoom = useCallback((width: number, depth: number, height: number) => {
+        const roomGroup = roomGroupRef.current;
+        if (!roomGroup) return;
 
-    // Apply Slicing Plane
-    useEffect(() => {
-        const three = threeRefs.current;
-        if (!three) return;
-
-        if (!sliceEnabled) {
-            three.renderer.clippingPlanes = [];
-            if (three.clippingPlaneHelper) three.clippingPlaneHelper.visible = false;
-            return;
+        // Clear previous room geometry
+        while (roomGroup.children.length > 0) {
+            const child = roomGroup.children[0] as THREE.Mesh;
+            roomGroup.remove(child);
+            if (child.geometry) child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+                child.material.forEach(m => m.dispose());
+            } else if (child.material) {
+                child.material.dispose();
+            }
         }
 
-        three.clippingPlane.constant = -sliceHeight;
-        three.renderer.clippingPlanes = [three.clippingPlane];
-        if (three.clippingPlaneHelper) three.clippingPlaneHelper.visible = true;
-    }, [sliceEnabled, sliceHeight]);
-
-    // Apply Viewport Mode
-    useEffect(() => {
-        const three = threeRefs.current;
-        if (!three) return;
-
-        three.roomGroup.traverse(child => {
-            if (child instanceof THREE.Mesh) {
-                if (viewportMode === 'wireframe') {
-                    child.material = new THREE.MeshBasicMaterial({ color: 0xFF5C00, wireframe: true, clippingPlanes: three.renderer.clippingPlanes });
-                } else if (viewportMode === 'clay') {
-                    child.material = new THREE.MeshStandardMaterial({ color: 0xE2E8F0, roughness: 0.9, clippingPlanes: three.renderer.clippingPlanes });
-                }
-            }
+        // 1. Warm Architectural Floor
+        const floorGeo = new THREE.BoxGeometry(width, 0.1, depth);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0xfdfaf7,
+            roughness: 0.35,
+            metalness: 0.05
         });
-    }, [viewportMode]);
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.position.y = -0.05;
+        floor.receiveShadow = true;
+        roomGroup.add(floor);
 
-    // -------------------------------------------------------------
-    // Chat & Spatial Prompt Handler
-    // -------------------------------------------------------------
-    const handleSendPrompt = (customPrompt?: string) => {
-        const text = (customPrompt || promptInput).trim();
-        if (!text && !attachedFloorImage) return;
+        // Floor Border Trim
+        const borderGeo = new THREE.BoxGeometry(width + 0.1, 0.04, depth + 0.1);
+        const borderMat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.6 });
+        const border = new THREE.Mesh(borderGeo, borderMat);
+        border.position.y = -0.07;
+        roomGroup.add(border);
+
+        // 2. Extruded Walls
+        const wallThickness = 0.22;
+        const wallMat = new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            roughness: 0.85,
+            metalness: 0.02
+        });
+        const accentWallMat = new THREE.MeshStandardMaterial({
+            color: 0xf1f5f9,
+            roughness: 0.75
+        });
+
+        // Back Wall (North)
+        const northWallGeo = new THREE.BoxGeometry(width, height, wallThickness);
+        const northWall = new THREE.Mesh(northWallGeo, accentWallMat);
+        northWall.position.set(0, height / 2, -depth / 2 - wallThickness / 2);
+        northWall.castShadow = true;
+        northWall.receiveShadow = true;
+        roomGroup.add(northWall);
+
+        // Left Wall (West - With window opening simulation)
+        const leftWallGeo = new THREE.BoxGeometry(wallThickness, height, depth);
+        const leftWall = new THREE.Mesh(leftWallGeo, wallMat);
+        leftWall.position.set(-width / 2 - wallThickness / 2, height / 2, 0);
+        leftWall.castShadow = true;
+        leftWall.receiveShadow = true;
+        roomGroup.add(leftWall);
+
+        // Glass Window Panel on Left Wall
+        const glassGeo = new THREE.BoxGeometry(0.04, height * 0.5, depth * 0.4);
+        const glassMat = new THREE.MeshPhysicalMaterial({
+            color: 0x93c5fd,
+            transparent: true,
+            opacity: 0.3,
+            roughness: 0.1,
+            metalness: 0.1,
+            transmission: 0.8
+        });
+        const glass = new THREE.Mesh(glassGeo, glassMat);
+        glass.position.set(-width / 2 - 0.05, height * 0.55, 0);
+        roomGroup.add(glass);
+
+        // Decorative Skirting Board
+        const skirtingGeo = new THREE.BoxGeometry(width, 0.1, 0.04);
+        const skirtingMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.5 });
+        const skirtingNorth = new THREE.Mesh(skirtingGeo, skirtingMat);
+        skirtingNorth.position.set(0, 0.05, -depth / 2 + 0.02);
+        roomGroup.add(skirtingNorth);
+    }, []);
+
+    // -------------------------------------------------------------------------
+    // Reconstruct Furniture Meshes in 3D Scene
+    // -------------------------------------------------------------------------
+    const rebuildFurnitureMeshes = useCallback((list: PlacedFurniture[]) => {
+        const group = furnitureGroupRef.current;
+        if (!group) return;
+
+        // Clear existing furniture meshes
+        while (group.children.length > 0) {
+            const child = group.children[0] as THREE.Mesh;
+            group.remove(child);
+            if (child.geometry) child.geometry.dispose();
+            if (Array.isArray(child.material)) {
+                child.material.forEach(m => m.dispose());
+            } else if (child.material) {
+                child.material.dispose();
+            }
+        }
+
+        list.forEach(item => {
+            const itemGroup = new THREE.Group();
+            itemGroup.position.set(...item.position);
+            itemGroup.rotation.y = item.rotationY;
+
+            const [w, h, d] = item.dimensions;
+            const mainColor = new THREE.Color(item.color);
+
+            if (item.category === 'Seating') {
+                // Procedural Modern Sectional / Sofa
+                const seatGeo = new THREE.BoxGeometry(w, h * 0.45, d);
+                const seatMat = new THREE.MeshStandardMaterial({ color: mainColor, roughness: 0.85 });
+                const seat = new THREE.Mesh(seatGeo, seatMat);
+                seat.position.y = 0;
+                seat.castShadow = true;
+                seat.receiveShadow = true;
+                itemGroup.add(seat);
+
+                // Backrest
+                const backGeo = new THREE.BoxGeometry(w, h * 0.6, d * 0.25);
+                const back = new THREE.Mesh(backGeo, seatMat);
+                back.position.set(0, h * 0.35, -d * 0.37);
+                back.castShadow = true;
+                itemGroup.add(back);
+
+                // Soft Throw Cushions
+                const cushionGeo = new THREE.BoxGeometry(0.5, 0.35, 0.15);
+                const cushionMat = new THREE.MeshStandardMaterial({ color: 0xff5c00, roughness: 0.9 });
+                const cushion1 = new THREE.Mesh(cushionGeo, cushionMat);
+                cushion1.position.set(-w * 0.3, h * 0.3, -d * 0.25);
+                cushion1.rotation.y = 0.2;
+                itemGroup.add(cushion1);
+
+                // Sleek Legs
+                const legGeo = new THREE.CylinderGeometry(0.025, 0.02, 0.15);
+                const legMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.8, roughness: 0.2 });
+                const legOffsets = [
+                    [w * 0.45, -h * 0.25, d * 0.4],
+                    [-w * 0.45, -h * 0.25, d * 0.4],
+                    [w * 0.45, -h * 0.25, -d * 0.4],
+                    [-w * 0.45, -h * 0.25, -d * 0.4]
+                ];
+                legOffsets.forEach(pos => {
+                    const leg = new THREE.Mesh(legGeo, legMat);
+                    leg.position.set(pos[0], pos[1], pos[2]);
+                    leg.castShadow = true;
+                    itemGroup.add(leg);
+                });
+            } else if (item.category === 'Tables') {
+                // Table Top
+                const topGeo = new THREE.BoxGeometry(w, 0.05, d);
+                const topMat = new THREE.MeshStandardMaterial({ color: mainColor, roughness: 0.25, metalness: 0.1 });
+                const top = new THREE.Mesh(topGeo, topMat);
+                top.position.y = h * 0.4;
+                top.castShadow = true;
+                top.receiveShadow = true;
+                itemGroup.add(top);
+
+                // Minimalist Plinth / Metal Legs
+                const baseGeo = new THREE.BoxGeometry(w * 0.8, h * 0.38, d * 0.6);
+                const baseMat = new THREE.MeshStandardMaterial({ color: 0x1e293b, metalness: 0.7, roughness: 0.3 });
+                const base = new THREE.Mesh(baseGeo, baseMat);
+                base.position.y = 0;
+                base.castShadow = true;
+                itemGroup.add(base);
+            } else if (item.category === 'Office') {
+                // Desk Tabletop
+                const deskTopGeo = new THREE.BoxGeometry(w, 0.06, d);
+                const deskMat = new THREE.MeshStandardMaterial({ color: mainColor, roughness: 0.4 });
+                const deskTop = new THREE.Mesh(deskTopGeo, deskMat);
+                deskTop.position.y = h * 0.4;
+                deskTop.castShadow = true;
+                itemGroup.add(deskTop);
+
+                // Minimal Steel Frame
+                const frameGeo = new THREE.BoxGeometry(w * 0.95, h * 0.8, d * 0.9);
+                const wireMat = new THREE.MeshStandardMaterial({ color: 0x0f172a, roughness: 0.2, metalness: 0.8 });
+                const frame = new THREE.Mesh(frameGeo, wireMat);
+                frame.position.y = 0;
+                frame.castShadow = true;
+                itemGroup.add(frame);
+
+                // Laptop on Desk
+                const laptopGeo = new THREE.BoxGeometry(0.35, 0.02, 0.25);
+                const laptopMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.9, roughness: 0.1 });
+                const laptop = new THREE.Mesh(laptopGeo, laptopMat);
+                laptop.position.set(0, h * 0.45, 0);
+                itemGroup.add(laptop);
+            } else {
+                // Generic High-Precision Architectural Volume
+                const boxGeo = new THREE.BoxGeometry(w, h, d);
+                const boxMat = new THREE.MeshStandardMaterial({ color: mainColor, roughness: 0.5, metalness: 0.1 });
+                const box = new THREE.Mesh(boxGeo, boxMat);
+                box.castShadow = true;
+                box.receiveShadow = true;
+                itemGroup.add(box);
+            }
+
+            group.add(itemGroup);
+        });
+    }, []);
+
+    // Trigger Initial Room & Furniture Build
+    useEffect(() => {
+        rebuildRoom(roomSpecs.width, roomSpecs.depth, roomSpecs.height);
+        rebuildFurnitureMeshes(furnitureList);
+    }, [roomSpecs, furnitureList, rebuildRoom, rebuildFurnitureMeshes]);
+
+    // -------------------------------------------------------------------------
+    // Camera View Mode (3D Perspective vs 2D Top-Down)
+    // -------------------------------------------------------------------------
+    const toggleCameraView = () => {
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (!camera || !controls) return;
+
+        if (cameraMode === '3d') {
+            // Switch to 2D Top-Down View
+            camera.position.set(0, 18, 0.01);
+            controls.target.set(0, 0, 0);
+            controls.enableRotate = false; // lock rotation in top-down
+            setCameraMode('top');
+        } else {
+            // Switch to 3D Isometric View
+            camera.position.set(11, 9, 13);
+            controls.target.set(0, 0.5, 0);
+            controls.enableRotate = true;
+            setCameraMode('3d');
+        }
+        controls.update();
+    };
+
+    // Reset Camera
+    const resetCamera = () => {
+        const camera = cameraRef.current;
+        const controls = controlsRef.current;
+        if (!camera || !controls) return;
+        camera.position.set(11, 9, 13);
+        controls.target.set(0, 0.5, 0);
+        controls.enableRotate = true;
+        controls.update();
+        setCameraMode('3d');
+    };
+
+    // Take High-DPI Snapshot
+    const handleSnapshot = () => {
+        const renderer = rendererRef.current;
+        if (!renderer) return;
+        const dataUrl = renderer.domElement.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `Slice3D_Render_${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+    };
+
+    // -------------------------------------------------------------------------
+    // Spatial AI Co-Pilot Execution
+    // -------------------------------------------------------------------------
+    const handleSendPrompt = (promptText?: string) => {
+        const query = (promptText || inputPrompt).trim();
+        if (!query && !attachedFloorPlan) return;
 
         const userMsg: ChatMessage = {
-            id: `usr_${Date.now()}`,
+            id: `usr-${Date.now()}`,
             sender: 'user',
-            text: text || 'Uploaded floor plan image for 3D reconstruction.',
+            text: query || 'Analyze attached 2D floor plan drawing and extrude 3D space',
             timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-            attachedImage: attachedFloorImage || undefined
+            floorPlanUrl: attachedFloorPlan?.url,
+            floorPlanName: attachedFloorPlan?.name
         };
 
         setChatMessages(prev => [...prev, userMsg]);
-        setPromptInput('');
-        setAttachedFloorImage(null);
-        setIsAiProcessing(true);
+        setInputPrompt('');
+        setIsAiThinking(true);
 
-        // AI Response Logic (Spatial Parser)
+        const currentAttached = attachedFloorPlan;
+        setAttachedFloorPlan(null); // clear attachment after send
+
+        // Simulate Spatial AI Parser & Room Extrusion
         setTimeout(() => {
-            const lower = text.toLowerCase();
-            let replyText = '';
-            let badge = '';
+            setIsAiThinking(false);
+            const lower = query.toLowerCase();
 
-            if (userMsg.attachedImage || lower.includes('floor plan') || lower.includes('reconstruct') || lower.includes('villa') || lower.includes('blueprint')) {
-                // Resize / Extrude Floor
-                setRoomDims({ name: 'AI Reconstructed Spatial Environment', w: 14, d: 11, h: 3.0 });
-                replyText = 'Detected perimeter walls, interior partition grid, and doorway openings from your 2D plan. Reconstructed the 3D spatial shell with realistic drywall textures and 3.0m ceiling elevation.';
-                badge = 'Extruded 3D Space (14m × 11m)';
-            } else if (lower.includes('sofa') || lower.includes('living') || lower.includes('couch')) {
-                const sofa = assetVault.find(a => a.category.toLowerCase().includes('living')) || assetVault[1];
-                const newPlaced: PlacedObject = {
-                    instanceId: `inst_${Date.now()}`,
-                    asset: sofa,
-                    position: [1.8, 0.35, 1.0]
-                };
-                setPlacedObjects(prev => [...prev, newPlaced]);
-                replyText = `Retrieved "${sofa.name}" from your 3D Asset Vault and positioned it in the living room zone. Active BOQ updated.`;
-                badge = `Staged: ${sofa.name} (₹${sofa.priceINR.toLocaleString()})`;
-            } else if (lower.includes('bed') || lower.includes('bedroom')) {
-                const bed = assetVault.find(a => a.category.toLowerCase().includes('bed')) || assetVault[0];
-                const newPlaced: PlacedObject = {
-                    instanceId: `inst_${Date.now()}`,
-                    asset: bed,
-                    position: [-3.0, 0.4, -2.0]
-                };
-                setPlacedObjects(prev => [...prev, newPlaced]);
-                replyText = `Retrieved "${bed.name}" from your vault and staged it into the master bedroom suite.`;
-                badge = `Staged: ${bed.name}`;
-            } else if (lower.includes('slice') || lower.includes('roof') || lower.includes('section')) {
-                setSliceEnabled(true);
-                setSliceHeight(1.5);
-                replyText = 'Activated horizontal dynamic section slicing at 1.5m depth to reveal internal room layouts and staged furniture.';
-                badge = 'Slicing Active: 1.5m Depth';
-            } else if (lower.includes('boq') || lower.includes('cost') || lower.includes('quote') || lower.includes('price')) {
-                const total = placedObjects.reduce((acc, p) => acc + p.asset.priceINR, 0);
-                replyText = `Current Bill of Quantities tabulates ${placedObjects.length} staged pieces totaling ₹${total.toLocaleString()} INR (exclusive of 18% GST). Switch to the BOQ tab to export CSV or send quote over WhatsApp.`;
-                badge = `Total BOQ: ₹${Math.round(total * 1.18).toLocaleString()} (Inc GST)`;
+            if (lower.includes('workstation') || lower.includes('office')) {
+                // Reconfigure to Executive Office Layout
+                setRoomSpecs({ name: 'Executive Studio & Office', width: 6.8, depth: 5.5, height: 2.8, areaSqFt: 480 });
+                setFurnitureList([
+                    { id: 'f-off-1', assetId: 'ast-3', name: 'Minimalist Oak Workstation Desk', category: 'Office', priceINR: 22000, position: [-1.2, 0.4, 0], rotationY: 0, dimensions: [1.6, 0.75, 0.8], color: '#d97706' },
+                    { id: 'f-off-2', assetId: 'ast-3', name: 'Minimalist Oak Workstation Desk', category: 'Office', priceINR: 22000, position: [1.2, 0.4, 0], rotationY: 0, dimensions: [1.6, 0.75, 0.8], color: '#d97706' },
+                    { id: 'f-off-3', assetId: 'ast-4', name: 'Herman Miller Style Mesh Chair', category: 'Office', priceINR: 19500, position: [-1.2, 0.4, 0.9], rotationY: 3.14, dimensions: [0.65, 1.0, 0.65], color: '#334155' },
+                    { id: 'f-off-4', assetId: 'ast-4', name: 'Herman Miller Style Mesh Chair', category: 'Office', priceINR: 19500, position: [1.2, 0.4, 0.9], rotationY: 3.14, dimensions: [0.65, 1.0, 0.65], color: '#334155' },
+                    { id: 'f-off-5', assetId: 'ast-5', name: 'Floating Wall Storage Unit', category: 'Storage', priceINR: 26000, position: [0, 0.25, -2.4], rotationY: 0, dimensions: [2.8, 0.45, 0.4], color: '#1e293b' }
+                ]);
+
+                setChatMessages(prev => [...prev, {
+                    id: `ai-${Date.now()}`,
+                    sender: 'ai',
+                    text: '✨ Configured Executive Office suite with dual ergonomic oak workstations, task seating, and storage. Updated Live BOQ: ₹1,09,000 + GST.',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    actionApplied: 'Executive Office Setup'
+                }]);
+            } else if (lower.includes('clear') || lower.includes('empty')) {
+                // Clear all furniture
+                setFurnitureList([]);
+                setChatMessages(prev => [...prev, {
+                    id: `ai-${Date.now()}`,
+                    sender: 'ai',
+                    text: '🧹 Cleared all furniture items. Architectural room shell ready for new asset placement.',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    actionApplied: 'Room Emptied'
+                }]);
+            } else if (currentAttached || lower.includes('plan') || lower.includes('2bhk')) {
+                // Reconstruct from Floor Plan
+                setRoomSpecs({ name: 'Extruded 2BHK Space', width: 7.8, depth: 6.2, height: 2.8, areaSqFt: 640 });
+                setFurnitureList([
+                    { id: 'f-fp-1', assetId: 'ast-1', name: 'Curved Bouclé Sectional Sofa', category: 'Seating', priceINR: 48500, position: [-1.5, 0.4, 0.8], rotationY: 0, dimensions: [2.6, 0.78, 0.95], color: '#e2e8f0' },
+                    { id: 'f-fp-2', assetId: 'ast-2', name: 'Walnut & Travertine Coffee Table', category: 'Tables', priceINR: 18200, position: [-1.5, 0.22, -0.4], rotationY: 0, dimensions: [1.2, 0.42, 0.6], color: '#78350f' },
+                    { id: 'f-fp-3', assetId: 'ast-6', name: 'Monolithic Dining Table (6-Seater)', category: 'Dining', priceINR: 36000, position: [2.2, 0.38, 0.5], rotationY: 1.57, dimensions: [1.8, 0.76, 0.9], color: '#475569' },
+                    { id: 'f-fp-4', assetId: 'ast-5', name: 'Floating Wall Media Console', category: 'Storage', priceINR: 26000, position: [-1.5, 0.25, -2.8], rotationY: 0, dimensions: [2.1, 0.45, 0.4], color: '#1e293b' }
+                ]);
+
+                setChatMessages(prev => [...prev, {
+                    id: `ai-${Date.now()}`,
+                    sender: 'ai',
+                    text: currentAttached 
+                        ? `📐 Successfully parsed floor plan "${currentAttached.name}". Extruded 640 sq.ft perimeter walls, zoned living & dining spaces, and staged 4 architectural assets.`
+                        : '✨ Extruded contemporary 2BHK living layout with sectional lounge, travertine table, and dining suite. Total estimated BOQ: ₹1,28,700.',
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    actionApplied: 'Floor Plan Extruded'
+                }]);
             } else {
-                replyText = `Synthesized your request: "${text}". Adjusted scene lighting, camera perspectives, and verified spatial bounds for mobile rendering.`;
-                badge = 'Scene Refined';
+                // General styling prompt
+                setChatMessages(prev => [...prev, {
+                    id: `ai-${Date.now()}`,
+                    sender: 'ai',
+                    text: `Applied "${query}". Optimized spatial clearances, lighting ambience, and staged matching architectural elements in real-time.`,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }]);
             }
-
-            const aiMsg: ChatMessage = {
-                id: `ai_${Date.now()}`,
-                sender: 'assistant',
-                text: replyText,
-                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                actionBadge: badge
-            };
-
-            setChatMessages(prev => [...prev, aiMsg]);
-            setIsAiProcessing(false);
-        }, 900);
+        }, 800);
     };
 
-    // Handle Image Attachment for Floor Plan
-    const handleAttachFloorImage = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = () => {
-            setAttachedFloorImage(reader.result as string);
+    // Stage Asset from Vault into 3D Scene
+    const stageAssetFromVault = (asset: StoredAsset) => {
+        const offset = (furnitureList.length % 5) * 0.6 - 1.2;
+        const newItem: PlacedFurniture = {
+            id: `f-${Date.now()}`,
+            assetId: asset.id,
+            name: asset.name,
+            category: asset.category,
+            priceINR: asset.priceINR,
+            position: [offset, 0.4, 0],
+            rotationY: 0,
+            dimensions: [1.2, 0.6, 0.8],
+            color: asset.color
         };
-        reader.readAsDataURL(file);
+
+        setFurnitureList(prev => [...prev, newItem]);
+        setActiveModal(null);
+        setIsDrawerOpen(false);
+
+        // Feedback in chat
+        setChatMessages(prev => [...prev, {
+            id: `stg-${Date.now()}`,
+            sender: 'ai',
+            text: `📦 Staged "${asset.name}" into the active 3D coordinates. Added ₹${asset.priceINR.toLocaleString('en-IN')} to Live BOQ.`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }]);
     };
 
-    // Handle Custom 3D Asset Addition to Vault
-    const handleAddAssetToVault = (e: React.FormEvent) => {
+    // Handle Upload of New 3D Asset
+    const handleSaveNewAsset = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!newAssetName || !newAssetFile) return;
+        if (!newAssetName) return;
 
         const newAsset: StoredAsset = {
-            id: `custom_${Date.now()}`,
+            id: `custom-${Date.now()}`,
             name: newAssetName,
             category: newAssetCategory,
-            priceINR: Number(newAssetPrice) || 25000,
-            dimensions: '1.8m × 0.9m',
-            fileName: newAssetFile.name,
-            fileSizeKB: Math.round(newAssetFile.size / 1024),
-            color: '#FF5C00',
+            priceINR: parseInt(newAssetPrice, 10) || 15000,
+            dimensions: newAssetDims || '1000 x 800 x 750 mm',
+            fileName: newAssetFile ? newAssetFile.name : `${newAssetName.toLowerCase().replace(/\s+/g, '_')}.glb`,
+            fileSizeKB: newAssetFile ? Math.round(newAssetFile.size / 1024) : 1850,
+            color: '#ff5c00',
             isCustom: true
         };
 
         setAssetVault(prev => [newAsset, ...prev]);
         setNewAssetName('');
-        setNewAssetPrice('32000');
+        setNewAssetPrice('24000');
         setNewAssetFile(null);
-        setIsAddingAsset(false);
-
-        // Notify in Chat
-        setChatMessages(prev => [
-            ...prev,
-            {
-                id: `msg_vault_${Date.now()}`,
-                sender: 'assistant',
-                text: `Successfully saved new 3D model "${newAsset.name}" to your Asset Vault. You can now prompt me to stage this object into your 3D rooms!`,
-                timestamp: 'Just now',
-                actionBadge: `Vault Asset Saved (${newAsset.fileSizeKB} KB)`
-            }
-        ]);
+        alert(`Saved "${newAsset.name}" to your 3D Asset Vault!`);
     };
 
-    // Stage Asset directly from Vault
-    const stageAssetFromVault = (asset: StoredAsset) => {
-        const randomX = (Math.random() - 0.5) * 6;
-        const randomZ = (Math.random() - 0.5) * 6;
-        setPlacedObjects(prev => [
-            ...prev,
-            {
-                instanceId: `inst_${Date.now()}`,
-                asset,
-                position: [randomX, 0.35, randomZ]
-            }
-        ]);
-        setCurrentView('studio');
+    // Load a Space Preset
+    const loadPresetSpace = (preset: SpacePreset) => {
+        setIsDrawerOpen(false);
+        handleSendPrompt(preset.prompt);
     };
 
-    // Remove Placed Asset
-    const removePlacedObject = (instanceId: string) => {
-        setPlacedObjects(prev => prev.filter(p => p.instanceId !== instanceId));
-    };
-
-    // Compute BOQ Totals
-    const boqSubtotal = placedObjects.reduce((acc, p) => acc + p.asset.priceINR, 0);
-    const boqTax = Math.round(boqSubtotal * 0.18);
-    const boqTotal = boqSubtotal + boqTax;
-
-    // Export Snapshot
-    const exportSnapshot = () => {
-        const three = threeRefs.current;
-        if (!three) return;
-        three.renderer.render(three.scene, three.camera);
-        const dataUrl = three.renderer.domElement.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `slice3d-snapshot-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
-    };
+    // Get the latest message for floating card
+    const latestAiMessage = [...chatMessages].reverse().find(m => m.sender === 'ai') || chatMessages[0];
 
     return (
-        <div ref={containerRef} className="space-y-4">
-            <RepoSyncBar repoName="Slice3D" />
+        <div className="relative w-screen h-[100dvh] overflow-hidden bg-slate-900 font-sans select-none">
+            {/* ================================================================= */}
+            {/* 1. PRIMARY LIVE 3D VIEWPORT (Full Screen WebGL) */}
+            {/* ================================================================= */}
+            <div 
+                ref={canvasContainerRef} 
+                className="absolute inset-0 w-full h-full cursor-grab active:cursor-grabbing touch-none z-0"
+            />
 
-            {/* MINIMAL BRANDED HEADER */}
-            <div className="bg-white rounded-2xl border border-black/10 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-3">
-                {/* Brand Identity: A Generative Slice Logo + SLICE 3D */}
-                <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden border border-black/10 shrink-0 shadow-sm">
-                        <img src={logoImg} alt="A Generative Slice" className="w-full h-full object-cover" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-sm tracking-wider uppercase font-heading text-[#0F172A]">
-                                SLICE 3D
-                            </span>
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00]">
-                                STUDIO
-                            </span>
-                        </div>
-                        <span className="text-[10px] text-[#64748B] hidden sm:block">
-                            By A Generative Slice • AI Spatial Floor Engine
-                        </span>
-                    </div>
-                </div>
-
-                {/* Minimal Top Navigation Tabs */}
-                <div className="flex items-center gap-1.5 bg-black/[0.03] p-1 rounded-xl">
+            {/* ================================================================= */}
+            {/* 2. FLOATING TOP HEADER BAR */}
+            {/* ================================================================= */}
+            <header className="absolute top-0 inset-x-0 z-20 px-3 py-3 sm:px-5 sm:py-4 flex items-center justify-between pointer-events-none">
+                {/* Left: Gemini Menu Button + Logo */}
+                <div className="flex items-center gap-2.5 pointer-events-auto">
                     <button
-                        onClick={() => setCurrentView('studio')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-heading transition-all ${
-                            currentView === 'studio'
-                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
-                                : 'text-[#64748B] hover:text-[#0F172A]'
-                        }`}
+                        onClick={() => setIsDrawerOpen(true)}
+                        className="w-10 h-10 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-md flex items-center justify-center text-slate-800 hover:bg-white hover:scale-105 active:scale-95 transition"
+                        title="Open Menu"
+                        aria-label="Open Navigation Menu"
                     >
-                        3D Studio &amp; Chat
+                        <Menu className="w-5 h-5" />
                     </button>
 
-                    <button
-                        onClick={() => setCurrentView('vault')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-heading transition-all ${
-                            currentView === 'vault'
-                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
-                                : 'text-[#64748B] hover:text-[#0F172A]'
-                        }`}
-                    >
-                        3D Asset Vault ({assetVault.length})
-                    </button>
-
-                    <button
-                        onClick={() => setCurrentView('boq')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-heading transition-all ${
-                            currentView === 'boq'
-                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
-                                : 'text-[#64748B] hover:text-[#0F172A]'
-                        }`}
-                    >
-                        Live BOQ (₹{boqTotal.toLocaleString()})
-                    </button>
-                </div>
-            </div>
-
-            {/* VIEW 1: STUDIO (3D CANVAS + AI CHAT CO-PILOT) */}
-            {currentView === 'studio' && (
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    {/* LEFT / MOBILE BOTTOM: AI CHAT CO-PILOT (4 COLS) */}
-                    <div className="lg:col-span-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col h-[520px] sm:h-[580px] overflow-hidden">
-                        {/* Chat Header */}
-                        <div className="p-3.5 border-b border-black/5 flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-[#FF5C00]/10 flex items-center justify-center text-[#FF5C00]">
-                                    <Bot className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <h4 className="font-extrabold text-xs text-[#0F172A] font-heading">
-                                        Spatial AI Co-Pilot
-                                    </h4>
-                                    <p className="text-[10px] text-[#64748B]">Attach 2D plan &amp; prompt modifications</p>
-                                </div>
-                            </div>
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        </div>
-
-                        {/* Chat Stream */}
-                        <div className="flex-grow p-3 space-y-3 overflow-y-auto text-xs">
-                            {chatMessages.map(msg => (
-                                <div
-                                    key={msg.id}
-                                    className={`flex items-start gap-2.5 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
-                                >
-                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white ${
-                                        msg.sender === 'user' ? 'bg-[#0F172A]' : 'bg-[#FF5C00]'
-                                    }`}>
-                                        {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
-                                    </div>
-
-                                    <div className={`max-w-[85%] rounded-2xl p-3 space-y-1.5 ${
-                                        msg.sender === 'user' 
-                                            ? 'bg-[#0F172A] text-white' 
-                                            : 'bg-black/[0.03] text-[#0F172A] border border-black/5'
-                                    }`}>
-                                        {msg.attachedImage && (
-                                            <div className="w-36 h-24 rounded-lg overflow-hidden border border-white/20 mb-1">
-                                                <img src={msg.attachedImage} alt="Attached 2D Plan" className="w-full h-full object-cover" />
-                                            </div>
-                                        )}
-                                        <p className="leading-relaxed">{msg.text}</p>
-                                        {msg.actionBadge && (
-                                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#FF5C00]/15 text-[#FF5C00]">
-                                                <Sparkles className="w-3 h-3" />
-                                                <span>{msg.actionBadge}</span>
-                                            </div>
-                                        )}
-                                        <span className={`block text-[9px] ${msg.sender === 'user' ? 'text-white/50' : 'text-[#64748B]'}`}>
-                                            {msg.timestamp}
-                                        </span>
-                                    </div>
-                                </div>
-                            ))}
-
-                            {isAiProcessing && (
-                                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#FF5C00]/5 text-[#FF5C00] text-xs">
-                                    <Sparkles className="w-4 h-4 animate-spin" />
-                                    <span>AI is synthesizing 3D geometry &amp; asset layout...</span>
-                                </div>
-                            )}
-                            <div ref={chatEndRef} />
-                        </div>
-
-                        {/* Quick Prompt Chips */}
-                        <div className="px-3 py-2 border-t border-black/5 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
-                            <button
-                                onClick={() => handleSendPrompt('Convert this floor plan to a luxury 2BHK 3D villa')}
-                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
-                            >
-                                ✨ Reconstruct 2BHK Plan
-                            </button>
-                            <button
-                                onClick={() => handleSendPrompt('Add a living room sofa and stage with white oak furniture')}
-                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
-                            >
-                                🛋️ Stage Living Room
-                            </button>
-                            <button
-                                onClick={() => handleSendPrompt('Slice roof at 1.5m to inspect interior layout')}
-                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
-                            >
-                                🔪 Slice at 1.5m
-                            </button>
-                            <button
-                                onClick={() => handleSendPrompt('Calculate current active BOQ estimate')}
-                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
-                            >
-                                📊 Calculate BOQ
-                            </button>
-                        </div>
-
-                        {/* Input & Image Attachment Tray */}
-                        <div className="p-3 border-t border-black/5 space-y-2 bg-[#FAFAFA]">
-                            {attachedFloorImage && (
-                                <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-[#FF5C00]/30 text-xs">
-                                    <div className="flex items-center gap-2">
-                                        <ImageIcon className="w-4 h-4 text-[#FF5C00]" />
-                                        <span className="font-bold text-[11px] text-[#0F172A]">2D Floor Plan Attached</span>
-                                    </div>
-                                    <button onClick={() => setAttachedFloorImage(null)} className="text-[#64748B] hover:text-red-500">
-                                        <X className="w-3.5 h-3.5" />
-                                    </button>
-                                </div>
-                            )}
-
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="file"
-                                    ref={floorPlanFileInputRef}
-                                    onChange={handleAttachFloorImage}
-                                    accept="image/*"
-                                    className="hidden"
-                                />
-                                <button
-                                    onClick={() => floorPlanFileInputRef.current?.click()}
-                                    className="p-2.5 rounded-xl border border-black/10 bg-white hover:bg-black/5 text-[#64748B] hover:text-[#FF5C00] transition-colors min-h-[42px] min-w-[42px] flex items-center justify-center cursor-pointer"
-                                    title="Attach 2D Floor Plan Photo"
-                                >
-                                    <Paperclip className="w-4 h-4" />
-                                </button>
-
-                                <input
-                                    type="text"
-                                    value={promptInput}
-                                    onChange={e => setPromptInput(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleSendPrompt()}
-                                    placeholder="Prompt AI to extrude plan, add furniture, slice..."
-                                    className="flex-grow px-3.5 py-2 rounded-xl bg-white border border-black/10 text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00] min-h-[42px]"
-                                />
-
-                                <button
-                                    onClick={() => handleSendPrompt()}
-                                    className="p-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white transition-all min-h-[42px] min-w-[42px] flex items-center justify-center shadow-sm cursor-pointer"
-                                >
-                                    <Send className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* RIGHT: THE 3D SPATIAL CANVAS (7 COLS) */}
-                    <div className="lg:col-span-7 relative rounded-2xl border border-black/10 bg-gradient-to-b from-[#f8fafc] to-[#edf2f7] overflow-hidden shadow-lg h-[520px] sm:h-[580px]">
-                        {/* Minimal Telemetry Overlay */}
-                        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md border border-black/10 text-xs font-mono shadow-sm pointer-events-none">
-                            <span className="font-bold text-[#FF5C00]">{fps} FPS</span>
-                            <span className="text-black/20">|</span>
-                            <span className="text-[#64748B]">{polyCount.toLocaleString()} Triangles</span>
-                        </div>
-
-                        {/* Top-Right Tools: Camera & Snapshot */}
-                        <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/10 p-1 rounded-xl shadow-sm">
-                            <button
-                                onClick={exportSnapshot}
-                                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#FF5C00] transition-colors"
-                                title="Export Snapshot"
-                            >
-                                <Camera className="w-3.5 h-3.5" />
-                            </button>
-                        </div>
-
-                        {/* The Three.js Canvas */}
-                        <div 
-                            ref={canvasContainerRef} 
-                            className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+                    <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md border border-slate-200/80 px-3 py-1.5 rounded-full shadow-md">
+                        <img 
+                            src={logoImg} 
+                            alt="A Generative Slice" 
+                            className="w-6 h-6 rounded-full object-cover border border-orange-200" 
                         />
-
-                        {/* Minimal Bottom Floating Controls: Viewport Mode & Slicing */}
-                        <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
-                            <div className="flex items-center gap-1 p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-md pointer-events-auto">
-                                {(['pbr', 'clay', 'wireframe'] as ViewportMode[]).map(mode => (
-                                    <button
-                                        key={mode}
-                                        onClick={() => setViewportMode(mode)}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all font-heading ${
-                                            viewportMode === mode
-                                                ? 'bg-[#FF5C00] text-white shadow-sm'
-                                                : 'text-[#64748B] hover:text-[#0F172A]'
-                                        }`}
-                                    >
-                                        {mode}
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Minimal Slice Tool Toggle */}
-                            <div className="flex items-center gap-2 p-1.5 px-2.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-md pointer-events-auto">
-                                <button
-                                    onClick={() => setSliceEnabled(!sliceEnabled)}
-                                    className={`flex items-center gap-1.5 text-xs font-bold transition-all ${
-                                        sliceEnabled ? 'text-[#FF5C00]' : 'text-[#64748B]'
-                                    }`}
-                                >
-                                    <Scissors className="w-3.5 h-3.5" />
-                                    <span className="text-[11px] font-heading">{sliceEnabled ? 'Slice: ON' : 'Slice'}</span>
-                                </button>
-                                {sliceEnabled && (
-                                    <input
-                                        type="range"
-                                        min="0"
-                                        max="3.5"
-                                        step="0.1"
-                                        value={sliceHeight}
-                                        onChange={e => setSliceHeight(Number(e.target.value))}
-                                        className="w-20 h-1 bg-black/10 rounded-lg appearance-none cursor-pointer accent-[#FF5C00]"
-                                    />
-                                )}
-                            </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold tracking-tight text-slate-900 text-sm sm:text-base">
+                                SLICE<span className="text-[#FF5C00]">3D</span>
+                            </span>
+                            <span className="hidden sm:inline-block text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-orange-100 text-[#FF5C00]">
+                                AI STUDIO
+                            </span>
                         </div>
                     </div>
                 </div>
+
+                {/* Right: Quick Viewport Actions & Live BOQ Pill */}
+                <div className="flex items-center gap-2 pointer-events-auto">
+                    {/* Camera Mode 2D/3D */}
+                    <button
+                        onClick={toggleCameraView}
+                        className="h-9 px-3 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm text-xs font-semibold text-slate-700 hover:text-slate-900 hover:bg-white transition flex items-center gap-1.5"
+                        title={cameraMode === '3d' ? 'Switch to 2D Floor Plan View' : 'Switch to 3D View'}
+                    >
+                        <Layers className="w-3.5 h-3.5 text-[#FF5C00]" />
+                        <span className="hidden xs:inline">{cameraMode === '3d' ? '2D Plan' : '3D Orbit'}</span>
+                    </button>
+
+                    {/* Snapshot Button */}
+                    <button
+                        onClick={handleSnapshot}
+                        className="w-9 h-9 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm text-slate-700 hover:text-[#FF5C00] hover:bg-white transition flex items-center justify-center"
+                        title="Take High-DPI Snapshot"
+                    >
+                        <Camera className="w-4 h-4" />
+                    </button>
+
+                    {/* Live BOQ Pill */}
+                    <button
+                        onClick={() => setActiveModal('boq')}
+                        className="h-9 px-3.5 rounded-full bg-slate-900/90 hover:bg-slate-900 text-white backdrop-blur-md shadow-md text-xs font-bold transition flex items-center gap-1.5 group"
+                    >
+                        <Calculator className="w-3.5 h-3.5 text-[#FF5C00]" />
+                        <span>₹{boqGrandTotal.toLocaleString('en-IN')}</span>
+                    </button>
+                </div>
+            </header>
+
+            {/* ================================================================= */}
+            {/* 3. GEMINI-STYLE LEFT SLIDE-OUT DRAWER MENU */}
+            {/* ================================================================= */}
+            {isDrawerOpen && (
+                <div 
+                    onClick={() => setIsDrawerOpen(false)}
+                    className="fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-sm transition-opacity"
+                />
             )}
 
-            {/* VIEW 2: 3D ASSET VAULT (PRODUCT ADDING & MANAGEMENT) */}
-            {currentView === 'vault' && (
-                <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/5">
+            <aside 
+                className={`fixed inset-y-0 left-0 z-50 w-[82vw] max-w-[340px] bg-white border-r border-slate-200 shadow-2xl flex flex-col transform transition-transform duration-300 ease-out ${
+                    isDrawerOpen ? 'translate-x-0' : '-translate-x-full'
+                }`}
+            >
+                {/* Drawer Header */}
+                <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                        <img src={logoImg} alt="Logo" className="w-7 h-7 rounded-full object-cover" />
                         <div>
-                            <div className="flex items-center gap-2">
-                                <Box className="w-5 h-5 text-[#FF5C00]" />
-                                <h3 className="font-extrabold text-base text-[#0F172A] font-heading">
-                                    3D Asset Vault &amp; Product Management
-                                </h3>
+                            <div className="font-extrabold text-slate-900 text-base leading-none">
+                                SLICE<span className="text-[#FF5C00]">3D</span>
                             </div>
-                            <p className="text-xs text-[#64748B] mt-0.5">
-                                Add your custom 3D files (.GLB, .GLTF, .OBJ) with itemized prices to stage into floor generation or prompt via AI.
-                            </p>
+                            <div className="text-[10px] text-slate-400 font-medium">A Generative Slice</div>
                         </div>
+                    </div>
+                    <button 
+                        onClick={() => setIsDrawerOpen(false)}
+                        className="p-1.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
 
+                {/* Drawer Body */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    {/* "+ New Space" Gemini Action */}
+                    <button
+                        onClick={() => {
+                            setIsDrawerOpen(false);
+                            handleSendPrompt('Clear all furniture and reset to clean 2BHK room perimeter');
+                        }}
+                        className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50 hover:bg-orange-50/50 hover:border-orange-200 text-slate-800 hover:text-[#FF5C00] font-semibold text-xs transition flex items-center gap-2 shadow-sm"
+                    >
+                        <Plus className="w-4 h-4 text-[#FF5C00]" />
+                        <span>Start New 3D Space</span>
+                    </button>
+
+                    {/* Section: Recent Spaces / History */}
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">
+                            Recent Architectural Spaces
+                        </div>
+                        <div className="space-y-1">
+                            {RECENT_SPACES.map(space => (
+                                <button
+                                    key={space.id}
+                                    onClick={() => loadPresetSpace(space)}
+                                    className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-100 transition group flex items-center justify-between"
+                                >
+                                    <div className="truncate pr-2">
+                                        <div className="text-xs font-semibold text-slate-800 group-hover:text-[#FF5C00] truncate">
+                                            {space.title}
+                                        </div>
+                                        <div className="text-[10px] text-slate-400">
+                                            {space.subtitle} • {space.areaSqFt} sq ft
+                                        </div>
+                                    </div>
+                                    <ArrowRight className="w-3.5 h-3.5 text-slate-300 group-hover:text-[#FF5C00] group-hover:translate-x-0.5 transition" />
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Section: Management Tools */}
+                    <div>
+                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400 px-1 mb-2">
+                            Management & BOQ
+                        </div>
+                        <div className="space-y-1">
+                            <button
+                                onClick={() => { setIsDrawerOpen(false); setActiveModal('vault'); }}
+                                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-100 transition flex items-center justify-between text-xs font-semibold text-slate-700"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <Box className="w-4 h-4 text-[#FF5C00]" />
+                                    <span>3D Asset Vault</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-600 font-bold">
+                                    {assetVault.length}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={() => { setIsDrawerOpen(false); setActiveModal('boq'); }}
+                                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-100 transition flex items-center justify-between text-xs font-semibold text-slate-700"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <Calculator className="w-4 h-4 text-emerald-600" />
+                                    <span>Bill of Quantities (BOQ)</span>
+                                </div>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold">
+                                    ₹{boqGrandTotal.toLocaleString('en-IN')}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={() => { setIsDrawerOpen(false); setActiveModal('specs'); }}
+                                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-100 transition flex items-center justify-between text-xs font-semibold text-slate-700"
+                            >
+                                <div className="flex items-center gap-2.5">
+                                    <ShieldCheck className="w-4 h-4 text-blue-600" />
+                                    <span>Room Dimensions & Specs</span>
+                                </div>
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                    {roomSpecs.width}m × {roomSpecs.depth}m
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={() => { setIsDrawerOpen(false); resetCamera(); }}
+                                className="w-full text-left px-3 py-2.5 rounded-xl hover:bg-slate-100 transition flex items-center gap-2.5 text-xs font-semibold text-slate-700"
+                            >
+                                <RotateCcw className="w-4 h-4 text-slate-400" />
+                                <span>Reset Camera View</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Drawer Footer */}
+                <div className="p-4 border-t border-slate-100 text-[11px] text-slate-400 text-center">
+                    A Generative Slice • Nungambakkam, Chennai<br />
+                    <span className="text-[10px] text-slate-300">Slice3D Spatial AI CAD v2.4</span>
+                </div>
+            </aside>
+
+            {/* ================================================================= */}
+            {/* 4. DOCKED BOTTOM CHAT SCREEN (Gemini Style) */}
+            {/* ================================================================= */}
+            <div className="absolute bottom-0 inset-x-0 z-30 p-3 pb-6 sm:p-5 flex flex-col items-center pointer-events-none">
+                <div className="w-full max-w-2xl space-y-2 pointer-events-auto">
+                    
+                    {/* Floating AI Assistant Response Card */}
+                    {latestAiMessage && (
+                        <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-xl border border-slate-200/80 p-3 sm:p-3.5 transition-all duration-300">
+                            <div className="flex items-start justify-between gap-2.5">
+                                <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                    <div className="w-7 h-7 rounded-full bg-orange-100 flex items-center justify-center text-[#FF5C00] shrink-0 mt-0.5">
+                                        <Bot className="w-4 h-4" />
+                                    </div>
+                                    <div className="text-xs text-slate-700 leading-relaxed">
+                                        <p className="line-clamp-2 sm:line-clamp-3">
+                                            {latestAiMessage.text}
+                                        </p>
+                                        {latestAiMessage.actionApplied && (
+                                            <div className="mt-1 flex items-center gap-1 text-[10px] font-bold text-emerald-600">
+                                                <CheckCircle2 className="w-3 h-3" />
+                                                <span>{latestAiMessage.actionApplied}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                <button
+                                    onClick={() => setActiveModal('history')}
+                                    className="text-[10px] font-semibold text-slate-400 hover:text-slate-800 px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 transition shrink-0"
+                                >
+                                    History ({chatMessages.length})
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Quick Suggestion Chips (Swipeable Horizontal Bar) */}
+                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
                         <button
-                            onClick={() => setIsAddingAsset(true)}
-                            className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm font-heading cursor-pointer min-h-[42px]"
+                            onClick={() => handleSendPrompt('Reconstruct 2BHK modern living room with open-plan kitchen')}
+                            className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm text-[11px] font-semibold text-slate-700 hover:border-orange-300 hover:text-[#FF5C00] transition active:scale-95"
                         >
-                            <FolderPlus className="w-4 h-4" />
-                            <span>Add New 3D Asset</span>
+                            ✨ 2BHK Living Room
+                        </button>
+                        <button
+                            onClick={() => handleSendPrompt('Add 2 ergonomic workstations with Herman Miller task chairs')}
+                            className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm text-[11px] font-semibold text-slate-700 hover:border-orange-300 hover:text-[#FF5C00] transition active:scale-95"
+                        >
+                            💼 Add Workstations
+                        </button>
+                        <button
+                            onClick={() => handleSendPrompt('Scandinavian open studio apartment layout')}
+                            className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm text-[11px] font-semibold text-slate-700 hover:border-orange-300 hover:text-[#FF5C00] transition active:scale-95"
+                        >
+                            🌿 Scandinavian Studio
+                        </button>
+                        <button
+                            onClick={() => handleSendPrompt('Clear all furniture and make room empty')}
+                            className="whitespace-nowrap px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-sm text-[11px] font-semibold text-slate-500 hover:text-red-500 transition active:scale-95"
+                        >
+                            🧹 Clear Room
                         </button>
                     </div>
 
-                    {/* Add New Asset Form Modal / Box */}
-                    {isAddingAsset && (
-                        <form onSubmit={handleAddAssetToVault} className="p-5 rounded-2xl bg-[#FF5C00]/[0.02] border border-[#FF5C00]/30 space-y-4">
-                            <div className="flex items-center justify-between">
-                                <h4 className="font-extrabold text-sm text-[#0F172A] font-heading">Upload Custom 3D Object</h4>
-                                <button type="button" onClick={() => setIsAddingAsset(false)} className="text-[#64748B] hover:text-black">
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
+                    {/* Gemini Prompt Bar */}
+                    <div className="bg-white/95 backdrop-blur-md rounded-full shadow-2xl border border-slate-200 p-1.5 sm:p-2 flex items-center gap-1.5">
+                        {/* Floor Plan Attachment Button */}
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            accept="image/*"
+                            className="hidden"
+                            onChange={e => {
+                                const file = e.target.files?.[0];
+                                if (file) {
+                                    const url = URL.createObjectURL(file);
+                                    setAttachedFloorPlan({ url, name: file.name });
+                                }
+                            }}
+                        />
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className={`p-2 rounded-full transition ${
+                                attachedFloorPlan 
+                                    ? 'bg-orange-100 text-[#FF5C00]' 
+                                    : 'text-slate-400 hover:text-slate-700 hover:bg-slate-100'
+                            }`}
+                            title="Attach 2D Floor Plan Image"
+                        >
+                            <Paperclip className="w-5 h-5" />
+                        </button>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
-                                        Product / Asset Name
-                                    </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        value={newAssetName}
-                                        onChange={e => setNewAssetName(e.target.value)}
-                                        placeholder="e.g. Italian Marble Dining Table"
-                                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00]"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
-                                        Category
-                                    </label>
-                                    <select
-                                        value={newAssetCategory}
-                                        onChange={e => setNewAssetCategory(e.target.value)}
-                                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00]"
-                                    >
-                                        <option value="Living">Living Room</option>
-                                        <option value="Bedroom">Bedroom</option>
-                                        <option value="Dining">Dining</option>
-                                        <option value="Office">Office</option>
-                                        <option value="Lighting">Lighting</option>
-                                        <option value="Kitchen">Kitchen</option>
-                                    </select>
-                                </div>
-
-                                <div>
-                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
-                                        Unit Price (INR ₹)
-                                    </label>
-                                    <input
-                                        type="number"
-                                        value={newAssetPrice}
-                                        onChange={e => setNewAssetPrice(e.target.value)}
-                                        placeholder="32000"
-                                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00]"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* 3D Model File Picker */}
-                            <div>
-                                <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
-                                    3D Model Geometry (.GLB / .GLTF)
-                                </label>
-                                <input
-                                    type="file"
-                                    required
-                                    ref={customAssetFileInputRef}
-                                    onChange={e => setNewAssetFile(e.target.files?.[0] || null)}
-                                    accept=".glb,.gltf,.obj"
-                                    className="text-xs text-[#64748B] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#FF5C00]/10 file:text-[#FF5C00] hover:file:bg-[#FF5C00]/20"
+                        {/* Attachment Thumbnail Chip inside Input Bar */}
+                        {attachedFloorPlan && (
+                            <div className="flex items-center gap-1.5 bg-orange-50 border border-orange-200 pl-1 pr-2 py-0.5 rounded-full max-w-[130px] shrink-0">
+                                <img 
+                                    src={attachedFloorPlan.url} 
+                                    alt="Floor plan" 
+                                    className="w-5 h-5 rounded-full object-cover" 
                                 />
-                            </div>
-
-                            <div className="flex items-center justify-end gap-2 pt-2">
+                                <span className="text-[10px] font-bold text-[#FF5C00] truncate">
+                                    {attachedFloorPlan.name}
+                                </span>
                                 <button
-                                    type="button"
-                                    onClick={() => setIsAddingAsset(false)}
-                                    className="px-4 py-2 rounded-xl border border-black/10 text-xs font-semibold text-[#64748B]"
+                                    onClick={() => setAttachedFloorPlan(null)}
+                                    className="text-orange-400 hover:text-orange-700 ml-0.5"
                                 >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    className="px-5 py-2 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all shadow-sm font-heading cursor-pointer"
-                                >
-                                    Save Asset to Vault
+                                    <X className="w-3 h-3" />
                                 </button>
                             </div>
-                        </form>
-                    )}
+                        )}
 
-                    {/* Stored Assets Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-                        {assetVault.map(asset => (
-                            <div
-                                key={asset.id}
-                                className="p-4 rounded-xl border border-black/10 bg-black/[0.01] hover:bg-[#FF5C00]/[0.02] hover:border-[#FF5C00]/30 transition-all flex flex-col justify-between space-y-3"
-                            >
-                                <div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-mono uppercase font-bold text-[#64748B]">
-                                            {asset.category}
-                                        </span>
-                                        <span className="text-xs font-mono font-bold text-[#0F172A]">
-                                            ₹{asset.priceINR.toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <h4 className="font-extrabold text-xs text-[#0F172A] mt-1 font-heading">
-                                        {asset.name}
-                                    </h4>
-                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-[#64748B] font-mono">
-                                        <span>{asset.dimensions}</span>
-                                        <span>•</span>
-                                        <span>{asset.fileName} ({asset.fileSizeKB} KB)</span>
-                                    </div>
-                                </div>
+                        {/* Input Field */}
+                        <input
+                            type="text"
+                            value={inputPrompt}
+                            onChange={e => setInputPrompt(e.target.value)}
+                            onKeyDown={e => e.key === 'Enter' && handleSendPrompt()}
+                            placeholder={attachedFloorPlan ? 'Describe how to build this plan...' : 'Ask Slice3D to design or place furniture...'}
+                            className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-slate-800 placeholder-slate-400 px-2 py-1"
+                        />
 
-                                <div className="pt-2 border-t border-black/5 flex items-center justify-between">
-                                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
-                                        <CheckCircle2 className="w-3 h-3" /> Ready
-                                    </span>
-                                    <button
-                                        onClick={() => stageAssetFromVault(asset)}
-                                        className="px-3 py-1.5 rounded-lg bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-[11px] font-bold transition-all font-heading cursor-pointer"
-                                    >
-                                        Stage in 3D
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                        {/* Send Button */}
+                        <button
+                            onClick={() => handleSendPrompt()}
+                            disabled={isAiThinking || (!inputPrompt.trim() && !attachedFloorPlan)}
+                            className="w-9 h-9 rounded-full bg-[#FF5C00] hover:bg-[#e05200] disabled:opacity-40 disabled:hover:bg-[#FF5C00] text-white flex items-center justify-center transition active:scale-95 shadow-md shrink-0"
+                            title="Send Prompt"
+                        >
+                            {isAiThinking ? (
+                                <Sparkles className="w-4 h-4 animate-spin text-white" />
+                            ) : (
+                                <Send className="w-4 h-4" />
+                            )}
+                        </button>
                     </div>
-                </div>
-            )}
 
-            {/* VIEW 3: LIVE BILL OF QUANTITIES (BOQ) & UNIVERSAL EXPORT */}
-            {currentView === 'boq' && (
-                <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-6">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/5">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
-                                <h3 className="font-extrabold text-base text-[#0F172A] font-heading">
-                                    Live Bill of Quantities (BOQ) &amp; Client Quotation
+                </div>
+            </div>
+
+            {/* ================================================================= */}
+            {/* 5. MODALS (Asset Vault, Live BOQ, Chat History, Specs) */}
+            {/* ================================================================= */}
+            {activeModal && (
+                <div className="fixed inset-0 z-50 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-5">
+                    <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden border border-slate-100 animate-in fade-in zoom-in-95 duration-200">
+                        
+                        {/* Modal Header */}
+                        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                            <div className="flex items-center gap-2.5">
+                                {activeModal === 'vault' && <Box className="w-5 h-5 text-[#FF5C00]" />}
+                                {activeModal === 'boq' && <Calculator className="w-5 h-5 text-emerald-600" />}
+                                {activeModal === 'history' && <Bot className="w-5 h-5 text-blue-600" />}
+                                {activeModal === 'specs' && <ShieldCheck className="w-5 h-5 text-indigo-600" />}
+                                <h3 className="font-extrabold text-slate-900 text-base">
+                                    {activeModal === 'vault' && '3D Asset Vault'}
+                                    {activeModal === 'boq' && 'Bill of Quantities (BOQ)'}
+                                    {activeModal === 'history' && 'Conversation History'}
+                                    {activeModal === 'specs' && 'Room Blueprint Specs'}
                                 </h3>
                             </div>
-                            <p className="text-xs text-[#64748B] mt-0.5">
-                                Real-time itemized procurement pricing tied directly to the 3D staged spatial layout.
-                            </p>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                            <a
-                                href={`https://wa.me/?text=${encodeURIComponent(`Check out our custom 3D architectural plan with live BOQ (₹${boqTotal.toLocaleString()}) on Slice3D: https://agenerativeslice.info/slice-3d`)}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 font-heading"
+                            <button
+                                onClick={() => setActiveModal(null)}
+                                className="p-1.5 text-slate-400 hover:text-slate-800 rounded-lg hover:bg-slate-100 transition"
                             >
-                                <Share2 className="w-3.5 h-3.5" />
-                                <span>Share Quote via WhatsApp</span>
-                            </a>
+                                <X className="w-5 h-5" />
+                            </button>
                         </div>
-                    </div>
 
-                    {/* Staged Items Table */}
-                    <div className="space-y-2 max-h-72 overflow-y-auto">
-                        {placedObjects.length === 0 ? (
-                            <div className="text-center py-10 text-xs text-[#64748B]">
-                                No assets staged in the 3D room yet. Stage items from the Studio Chat or Asset Vault.
-                            </div>
-                        ) : (
-                            placedObjects.map(p => (
-                                <div
-                                    key={p.instanceId}
-                                    className="flex items-center justify-between p-3 rounded-xl bg-black/[0.01] border border-black/5 text-xs"
-                                >
+                        {/* Modal Content */}
+                        <div className="p-5 overflow-y-auto flex-1">
+                            
+                            {/* --- 3D ASSET VAULT MODAL --- */}
+                            {activeModal === 'vault' && (
+                                <div className="space-y-6">
+                                    {/* Upload Form */}
+                                    <form onSubmit={handleSaveNewAsset} className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                                                Add New 3D Model File (.glb, .gltf)
+                                            </span>
+                                            <span className="text-[10px] text-slate-400">Saved to Local Vault</span>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            <div>
+                                                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Product Name</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={newAssetName} 
+                                                    onChange={e => setNewAssetName(e.target.value)} 
+                                                    placeholder="e.g. Marble Top Dining Table" 
+                                                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white outline-none focus:border-[#FF5C00]"
+                                                    required 
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Category</label>
+                                                <select 
+                                                    value={newAssetCategory} 
+                                                    onChange={e => setNewAssetCategory(e.target.value)} 
+                                                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white outline-none focus:border-[#FF5C00]"
+                                                >
+                                                    <option>Seating</option>
+                                                    <option>Tables</option>
+                                                    <option>Office</option>
+                                                    <option>Storage</option>
+                                                    <option>Dining</option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Price (₹ INR)</label>
+                                                <input 
+                                                    type="number" 
+                                                    value={newAssetPrice} 
+                                                    onChange={e => setNewAssetPrice(e.target.value)} 
+                                                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white outline-none focus:border-[#FF5C00]" 
+                                                />
+                                            </div>
+
+                                            <div>
+                                                <label className="text-[11px] font-semibold text-slate-600 block mb-1">Dimensions (W x D x H)</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={newAssetDims} 
+                                                    onChange={e => setNewAssetDims(e.target.value)} 
+                                                    placeholder="1500 x 800 x 750 mm" 
+                                                    className="w-full text-xs px-3 py-2 rounded-xl border border-slate-200 bg-white outline-none focus:border-[#FF5C00]" 
+                                                />
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-between pt-1">
+                                            <input 
+                                                type="file" 
+                                                ref={modelUploadInputRef} 
+                                                accept=".glb,.gltf,.obj" 
+                                                className="hidden" 
+                                                onChange={e => e.target.files?.[0] && setNewAssetFile(e.target.files[0])} 
+                                            />
+                                            <button 
+                                                type="button" 
+                                                onClick={() => modelUploadInputRef.current?.click()}
+                                                className="text-xs font-semibold text-slate-700 bg-white border border-slate-200 px-3 py-1.5 rounded-xl hover:bg-slate-100 transition flex items-center gap-1.5"
+                                            >
+                                                <Upload className="w-3.5 h-3.5 text-slate-400" />
+                                                <span>{newAssetFile ? newAssetFile.name : 'Choose .glb / .gltf'}</span>
+                                            </button>
+
+                                            <button 
+                                                type="submit" 
+                                                className="text-xs font-bold text-white bg-[#FF5C00] hover:bg-[#e05200] px-4 py-1.5 rounded-xl transition"
+                                            >
+                                                Save to Vault
+                                            </button>
+                                        </div>
+                                    </form>
+
+                                    {/* Asset Catalog Grid */}
                                     <div>
-                                        <span className="font-bold text-[#0F172A] block font-heading">{p.asset.name}</span>
-                                        <span className="text-[10px] text-[#64748B]">
-                                            {p.asset.category} • {p.asset.dimensions} • {p.asset.fileName}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className="font-mono font-bold text-[#0F172A]">
-                                            ₹{p.asset.priceINR.toLocaleString()}
-                                        </span>
-                                        <button
-                                            onClick={() => removePlacedObject(p.instanceId)}
-                                            className="text-red-500 hover:text-red-700 p-1"
-                                        >
-                                            <Trash2 className="w-3.5 h-3.5" />
-                                        </button>
+                                        <div className="text-xs font-bold text-slate-800 uppercase tracking-wide mb-3">
+                                            Stored Assets ({assetVault.length})
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                            {assetVault.map(asset => (
+                                                <div 
+                                                    key={asset.id} 
+                                                    className="p-3 rounded-2xl border border-slate-200 bg-white hover:border-orange-200 hover:shadow-sm transition flex flex-col justify-between"
+                                                >
+                                                    <div>
+                                                        <div className="flex items-start justify-between gap-1 mb-1">
+                                                            <div className="font-bold text-slate-800 text-xs">
+                                                                {asset.name}
+                                                            </div>
+                                                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 font-semibold text-slate-600">
+                                                                {asset.category}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-[11px] text-slate-500 mb-2">
+                                                            ₹{asset.priceINR.toLocaleString('en-IN')} • {asset.dimensions}
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => stageAssetFromVault(asset)}
+                                                        className="w-full py-1.5 rounded-xl bg-orange-50 hover:bg-[#FF5C00] text-[#FF5C00] hover:text-white font-bold text-[11px] transition flex items-center justify-center gap-1"
+                                                    >
+                                                        <Plus className="w-3 h-3" />
+                                                        <span>Stage in 3D Scene</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
                                 </div>
-                            ))
-                        )}
-                    </div>
+                            )}
 
-                    {/* Financial Summary */}
-                    <div className="pt-4 border-t border-black/5 space-y-2 max-w-sm ml-auto">
-                        <div className="flex items-center justify-between text-xs text-[#64748B]">
-                            <span>Items Subtotal ({placedObjects.length} items):</span>
-                            <span className="font-mono">₹{boqSubtotal.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-xs text-[#64748B]">
-                            <span>GST (18% Statutory):</span>
-                            <span className="font-mono">₹{boqTax.toLocaleString()}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-sm font-bold text-[#0F172A] pt-2 border-t border-black/5 font-heading">
-                            <span>Grand Total Estimate:</span>
-                            <span className="font-mono text-[#FF5C00] text-base">₹{boqTotal.toLocaleString()}</span>
+                            {/* --- LIVE BILL OF QUANTITIES (BOQ) MODAL --- */}
+                            {activeModal === 'boq' && (
+                                <div className="space-y-4">
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead>
+                                                <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[10px]">
+                                                    <th className="pb-2">Item</th>
+                                                    <th className="pb-2">Category</th>
+                                                    <th className="pb-2 text-right">Price</th>
+                                                    <th className="pb-2 text-center">Action</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {furnitureList.map(item => (
+                                                    <tr key={item.id} className="text-slate-700">
+                                                        <td className="py-2.5 font-semibold text-slate-800">{item.name}</td>
+                                                        <td className="py-2.5 text-slate-500">{item.category}</td>
+                                                        <td className="py-2.5 text-right font-bold text-slate-900">
+                                                            ₹{item.priceINR.toLocaleString('en-IN')}
+                                                        </td>
+                                                        <td className="py-2.5 text-center">
+                                                            <button
+                                                                onClick={() => setFurnitureList(prev => prev.filter(f => f.id !== item.id))}
+                                                                className="text-slate-300 hover:text-red-500 transition p-1"
+                                                            >
+                                                                <Trash2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Cost Summary Box */}
+                                    <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200/80 space-y-2 text-xs">
+                                        <div className="flex justify-between text-slate-600">
+                                            <span>Subtotal ({furnitureList.length} items)</span>
+                                            <span className="font-semibold">₹{boqSubtotal.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <div className="flex justify-between text-slate-600">
+                                            <span>Statutory GST (18%)</span>
+                                            <span className="font-semibold">₹{gstAmount.toLocaleString('en-IN')}</span>
+                                        </div>
+                                        <div className="border-t border-slate-200 pt-2 flex justify-between font-extrabold text-sm text-slate-900">
+                                            <span>Grand Total (INR)</span>
+                                            <span className="text-[#FF5C00]">₹{boqGrandTotal.toLocaleString('en-IN')}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* WhatsApp Quotation Action */}
+                                    <a
+                                        href={`https://wa.me/919999999999?text=${encodeURIComponent(`Hi Slice3D! I would like to order the staged BOQ quotation for ${roomSpecs.name}. Total: ₹${boqGrandTotal.toLocaleString('en-IN')}`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs text-center block transition shadow-md"
+                                    >
+                                        Request Official Quotation on WhatsApp
+                                    </a>
+                                </div>
+                            )}
+
+                            {/* --- CHAT HISTORY MODAL --- */}
+                            {activeModal === 'history' && (
+                                <div className="space-y-3">
+                                    {chatMessages.map(msg => (
+                                        <div 
+                                            key={msg.id} 
+                                            className={`p-3 rounded-2xl text-xs ${
+                                                msg.sender === 'user' 
+                                                    ? 'bg-slate-100 ml-8 text-slate-800' 
+                                                    : 'bg-orange-50/70 border border-orange-100 mr-8 text-slate-800'
+                                            }`}
+                                        >
+                                            <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 mb-1">
+                                                <span>{msg.sender === 'user' ? 'You' : 'Spatial AI Co-Pilot'}</span>
+                                                <span>{msg.timestamp}</span>
+                                            </div>
+                                            {msg.floorPlanUrl && (
+                                                <div className="mb-2">
+                                                    <img 
+                                                        src={msg.floorPlanUrl} 
+                                                        alt="Attached plan" 
+                                                        className="w-24 h-24 rounded-lg object-cover border border-slate-200 shadow-sm" 
+                                                    />
+                                                </div>
+                                            )}
+                                            <p className="leading-relaxed">{msg.text}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* --- ROOM SPECS MODAL --- */}
+                            {activeModal === 'specs' && (
+                                <div className="space-y-4 text-xs">
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                            <div className="text-[10px] uppercase font-bold text-slate-400">Room Width</div>
+                                            <div className="text-base font-extrabold text-slate-800">{roomSpecs.width} Meters</div>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                            <div className="text-[10px] uppercase font-bold text-slate-400">Room Depth</div>
+                                            <div className="text-base font-extrabold text-slate-800">{roomSpecs.depth} Meters</div>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                            <div className="text-[10px] uppercase font-bold text-slate-400">Ceiling Height</div>
+                                            <div className="text-base font-extrabold text-slate-800">{roomSpecs.height} Meters</div>
+                                        </div>
+                                        <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200">
+                                            <div className="text-[10px] uppercase font-bold text-slate-400">Floor Area</div>
+                                            <div className="text-base font-extrabold text-[#FF5C00]">{roomSpecs.areaSqFt} Sq.Ft</div>
+                                        </div>
+                                    </div>
+                                    <div className="text-[11px] text-slate-500 leading-relaxed">
+                                        Wall thickness is standard 220mm brick masonry equivalent. Flooring incorporates high-durability architectural terrazzo with anti-reflective matte clear coat.
+                                    </div>
+                                </div>
+                            )}
+
                         </div>
                     </div>
                 </div>
             )}
         </div>
     );
-};
+}
+
+export default Slice3DShowcase;
