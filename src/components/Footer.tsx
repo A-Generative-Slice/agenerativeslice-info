@@ -46,30 +46,27 @@ export const Footer = () => {
                         </div>
                     </div>
 
-                    {/* Slice Suite Repos */}
+                    {/* Slice Suite Workspaces */}
                     <div>
                         <h4 className="text-xs font-bold uppercase tracking-widest text-[#0F172A] dark:text-white/90 mb-4 font-heading">
-                            GitHub Repositories
+                            Interactive Workspaces
                         </h4>
                         <ul className="space-y-2 text-xs">
                             {[
-                                { name: 'Slice3D', url: 'https://github.com/A-Generative-Slice/Slice3D' },
-                                { name: 'SliceLeads', url: 'https://github.com/A-Generative-Slice/SliceLeads' },
-                                { name: 'SliceMail', url: 'https://github.com/A-Generative-Slice/SliceMail' },
-                                { name: 'SliceInbox', url: 'https://github.com/A-Generative-Slice/SliceInbox' },
-                                { name: 'SlicePPT', url: 'https://github.com/A-Generative-Slice/SlicePPT' },
-                                { name: 'SliceDAM', url: 'https://github.com/A-Generative-Slice/SliceDAM' },
-                                { name: 'SliceClass', url: 'https://github.com/A-Generative-Slice/SliceClass' }
-                            ].map((repo) => (
-                                <li key={repo.name}>
+                                { name: 'Slice3D (Spatial WebGL)', path: '/slice-3d' },
+                                { name: 'SliceLeads (Lead Engine)', path: '/slice-leads' },
+                                { name: 'SliceMail (Smart Outreach)', path: '/slice-mail' },
+                                { name: 'SliceInbox (AI Chief of Staff)', path: '/slice-inbox' },
+                                { name: 'SlicePPT (Deck Generator)', path: '/slice-ppt' },
+                                { name: 'SliceDAM (Document Vault)', path: '/slice-dam' },
+                                { name: 'SliceClass (Studio LMS)', path: '/slice-class' }
+                            ].map((item) => (
+                                <li key={item.name}>
                                     <a
-                                        href={repo.url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                        href={item.path}
                                         className="text-[#64748B] dark:text-white/60 hover:text-[#FF5C00] transition-colors flex items-center gap-1.5"
                                     >
-                                        <span>{repo.name}</span>
-                                        <ExternalLink className="w-2.5 h-2.5 opacity-60" />
+                                        <span>{item.name}</span>
                                     </a>
                                 </li>
                             ))}

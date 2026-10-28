@@ -106,12 +106,12 @@ export const RepoSyncBar: React.FC<RepoSyncBarProps> = ({ repoName, onSyncComple
                     </button>
 
                     <a
-                        href={status.htmlUrl}
+                        href="https://agenerativeslice.com/products"
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="px-3 py-1.5 rounded-lg bg-[#FF5C00] text-white text-[11px] font-bold hover:bg-[#FF8C1A] transition-all flex items-center gap-1 shadow-sm"
+                        className="px-3 py-1.5 rounded-lg bg-[#FF5C00] text-white text-[11px] font-bold hover:bg-[#FF8C1A] transition-all flex items-center gap-1 shadow-sm font-heading"
                     >
-                        <span>GitHub Repo</span>
+                        <span>Official Studio Hub</span>
                         <ExternalLink className="w-3 h-3" />
                     </a>
                 </div>
