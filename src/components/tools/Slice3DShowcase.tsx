@@ -1,384 +1,411 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { 
-    Scissors, Layers, Maximize2, Minimize2, Camera, 
-    Upload, Play, Pause, RefreshCw, Activity, 
-    ChevronDown, Sparkles, MapPin
+    Scan, Upload, Box, 
+    Download, Plus, Trash2, 
+    CheckCircle2, Sparkles, 
+    Camera, Play, Pause, Activity, ChevronRight, 
+    Building, Sofa, Share2, Scissors, Sun
 } from 'lucide-react';
 import { RepoSyncBar } from '../RepoSyncBar';
 
-// Types
-export type ViewportMode = 'pbr' | 'wireframe' | 'normals' | 'clay' | 'xray';
+export type ViewportMode = 'pbr' | 'wireframe' | 'normals' | 'clay';
 export type LightingPreset = 'studio' | 'sunset' | 'cyberpunk' | 'cad';
 export type SliceAxis = 'x' | 'y' | 'z';
+export type ActiveWorkflowTab = 'scan' | 'walkthrough' | 'furnish' | 'export';
 
-interface ModelPreset {
+// Sample Floor Plans for Instant 2D -> 3D Reconstruction
+interface SampleFloorPlan {
     id: string;
     name: string;
-    category: string;
-    url: string;
-    description: string;
-    scale: number;
-    rotationOffset?: [number, number, number];
-    isProcedural?: boolean;
+    tag: string;
+    area: string;
+    dims: string;
+    desc: string;
+    glbFile: string;
+    walls: { x: number; z: number; w: number; d: number; h: number }[];
+    previewSvgPath: string;
 }
 
-const MODEL_PRESETS: ModelPreset[] = [
+const SAMPLE_PLANS: SampleFloorPlan[] = [
     {
-        id: 'floorplan_v2',
-        name: 'Architectural Villa Plan (Draco 49KB)',
-        category: 'Architecture & Real Estate',
-        url: '/models/3d_floor_plan_2.glb',
-        description: 'Multi-room luxury villa layout with partition walls and furniture staging.',
-        scale: 1.0
+        id: 'villa_2bhk',
+        name: 'Metropolis Luxury 2BHK Villa',
+        tag: 'RESIDENTIAL',
+        area: '1,420 sq.ft',
+        dims: '14.2m × 10.8m',
+        desc: 'Master suite, guest bedroom, open-concept living hall, and semi-open modular kitchen.',
+        glbFile: '/models/3d_floor_plan_2.glb',
+        previewSvgPath: 'M10 10 H90 V90 H10 Z M10 50 H90 M50 10 V90 M30 50 V90',
+        walls: [
+            { x: 0, z: -4, w: 10, d: 0.3, h: 2.8 },
+            { x: 0, z: 4, w: 10, d: 0.3, h: 2.8 },
+            { x: -5, z: 0, w: 0.3, d: 8, h: 2.8 },
+            { x: 5, z: 0, w: 0.3, d: 8, h: 2.8 },
+            { x: 0, z: 0, w: 0.3, d: 8, h: 2.8 },
+            { x: -2.5, z: 0, w: 5, d: 0.3, h: 2.8 }
+        ]
     },
     {
-        id: 'dragon_asset',
-        name: 'Low-Poly Studio Asset (35KB)',
-        category: 'Blender FastMCP Procedural',
-        url: '/models/low_poly_model.glb',
-        description: 'Parametric dark-grey low-poly mesh built via the Slice3D Blender automation bridge.',
-        scale: 1.2
+        id: 'studio_loft',
+        name: 'Urban Minimalist Studio Loft',
+        tag: 'COMMERCIAL / PWA',
+        area: '680 sq.ft',
+        dims: '8.5m × 7.2m',
+        desc: 'Open-plan workspace, alcove bedroom zone, partition wall, and private restroom.',
+        glbFile: '/models/3d_floor_plan.glb',
+        previewSvgPath: 'M15 15 H85 V85 H15 Z M15 45 H55 M55 15 V45',
+        walls: [
+            { x: 0, z: -3, w: 7, d: 0.3, h: 2.6 },
+            { x: 0, z: 3, w: 7, d: 0.3, h: 2.6 },
+            { x: -3.5, z: 0, w: 0.3, d: 6, h: 2.6 },
+            { x: 3.5, z: 0, w: 0.3, d: 6, h: 2.6 },
+            { x: -1, z: 1, w: 3, d: 0.3, h: 2.6 }
+        ]
     },
     {
-        id: 'cad_gun',
-        name: 'Hard-Surface Precision Model (68KB)',
-        category: 'Industrial Design',
-        url: '/models/high_quality_gun.glb',
-        description: 'Hard-surface mechanical asset for manufacturing and tolerance inspection.',
-        scale: 1.5
-    },
-    {
-        id: 'floorplan_v1',
-        name: 'Structural Blueprints (46KB)',
-        category: 'Civil Engineering',
-        url: '/models/3d_floor_plan.glb',
-        description: 'Foundation slab and load-bearing column framework.',
-        scale: 1.0
-    },
-    {
-        id: 'procedural_crystal',
-        name: 'Procedural Crystal Geode (Live WebGL)',
-        category: 'Generative Algorithm',
-        url: '',
-        description: 'Real-time mathematical icosahedron lattice with multi-facet noise deformation.',
-        scale: 1.0,
-        isProcedural: true
+        id: 'penthouse_3bhk',
+        name: 'Grand Horizon 3BHK Penthouse',
+        tag: 'HIGH-TICKET',
+        area: '2,850 sq.ft',
+        dims: '21.0m × 16.5m',
+        desc: 'Wrap-around balcony, 3 ensuite bedrooms, formal foyer, and expanded dining hall.',
+        glbFile: '/models/3d_floor_plan_2.glb',
+        previewSvgPath: 'M5 5 H95 V95 H5 Z M5 35 H95 M5 65 H65 M65 5 V95',
+        walls: [
+            { x: 0, z: -5, w: 14, d: 0.35, h: 3.0 },
+            { x: 0, z: 5, w: 14, d: 0.35, h: 3.0 },
+            { x: -7, z: 0, w: 0.35, d: 10, h: 3.0 },
+            { x: 7, z: 0, w: 0.35, d: 10, h: 3.0 },
+            { x: 2, z: 0, w: 0.35, d: 10, h: 3.0 },
+            { x: -3, z: 2, w: 6, d: 0.35, h: 3.0 }
+        ]
     }
 ];
 
-interface AnnotationPoint {
+// Modular Furniture Catalog Item
+export interface FurnitureItem {
     id: string;
-    title: string;
-    tag: string;
-    desc: string;
-    pos: THREE.Vector3;
+    name: string;
+    category: 'Bedroom' | 'Living' | 'Dining' | 'Office' | 'Lighting' | 'Kitchen';
+    priceINR: number;
+    priceUSD: number;
+    dimensions: string;
+    spec: string;
+    color: string;
+    geometryType: 'bed' | 'sofa' | 'table' | 'desk' | 'light' | 'kitchen';
+}
+
+const FURNITURE_CATALOG: FurnitureItem[] = [
+    {
+        id: 'furn_bed',
+        name: 'Executive Teak King Bed & Headboard',
+        category: 'Bedroom',
+        priceINR: 48000,
+        priceUSD: 580,
+        dimensions: '2.0m × 1.8m × 1.1m',
+        spec: 'Solid Grade-A Teak Wood, upholstered linen backboard, hydraulic underbed storage.',
+        color: '#854D0E',
+        geometryType: 'bed'
+    },
+    {
+        id: 'furn_sofa',
+        name: 'Scandinavian 3-Seater Fluted Sofa',
+        category: 'Living',
+        priceINR: 36000,
+        priceUSD: 430,
+        dimensions: '2.2m × 0.9m × 0.75m',
+        spec: 'High-density foam, hydrophobic velvet fabric, brushed brass architectural feet.',
+        color: '#FF5C00',
+        geometryType: 'sofa'
+    },
+    {
+        id: 'furn_dining',
+        name: 'Minimalist 6-Seat Oak Dining Suite',
+        category: 'Dining',
+        priceINR: 28500,
+        priceUSD: 345,
+        dimensions: '1.8m × 0.9m × 0.76m',
+        spec: 'Natural American White Oak, matte polyurethane seal, chamfered edge profile.',
+        color: '#D97706',
+        geometryType: 'table'
+    },
+    {
+        id: 'furn_desk',
+        name: 'Ergonomic Executive Dual-Monitor Workstation',
+        category: 'Office',
+        priceINR: 22000,
+        priceUSD: 265,
+        dimensions: '1.5m × 0.75m × 0.74m',
+        spec: 'Matte black steel chassis, integrated cable tray, acoustic modesty panel.',
+        color: '#1E293B',
+        geometryType: 'desk'
+    },
+    {
+        id: 'furn_light',
+        name: 'Architectural Recessed Luminaire Set (8 Pcs)',
+        category: 'Lighting',
+        priceINR: 14500,
+        priceUSD: 175,
+        dimensions: '90mm cut-out, 3000K warm white',
+        spec: 'CRI 95+ anti-glare reflector optics, flicker-free dimmable driver module.',
+        color: '#F59E0B',
+        geometryType: 'light'
+    },
+    {
+        id: 'furn_kitchen',
+        name: 'Designer Quartz Modular Island & Cooktop',
+        category: 'Kitchen',
+        priceINR: 65000,
+        priceUSD: 780,
+        dimensions: '2.4m × 1.0m × 0.9m',
+        spec: 'Calacatta engineered quartz countertop, soft-close Blum hardware, breakfast bar.',
+        color: '#64748B',
+        geometryType: 'kitchen'
+    }
+];
+
+interface PlacedObject {
+    instanceId: string;
+    item: FurnitureItem;
+    position: [number, number, number];
 }
 
 export const Slice3DShowcase: React.FC = () => {
-    // Canvas & Container Refs
+    // Container Refs
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasContainerRef = useRef<HTMLDivElement | null>(null);
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const planImageInputRef = useRef<HTMLInputElement | null>(null);
 
-    // Three.js internal object refs (persistent across renders)
+    // Three.js internal object refs
     const threeRefs = useRef<{
         scene: THREE.Scene;
         camera: THREE.PerspectiveCamera;
         renderer: THREE.WebGLRenderer;
         controls: OrbitControls;
-        currentModelGroup: THREE.Group;
+        roomGroup: THREE.Group;
+        furnitureGroup: THREE.Group;
         clippingPlane: THREE.Plane;
         clippingPlaneHelper: THREE.PlaneHelper | null;
         ambientLight: THREE.AmbientLight;
         directionalLight: THREE.DirectionalLight;
         rimLight: THREE.PointLight;
         groundGrid: THREE.GridHelper;
-        originalMaterials: Map<string, THREE.Material | THREE.Material[]>;
-        childInitialPositions: Map<THREE.Object3D, THREE.Vector3>;
         animFrameId: number;
     } | null>(null);
 
-    // State
-    const [selectedPreset, setSelectedPreset] = useState<ModelPreset>(MODEL_PRESETS[0]);
+    // Navigation / Active Workflow State
+    const [activeTab, setActiveTab] = useState<ActiveWorkflowTab>('walkthrough');
+    const [selectedPlan, setSelectedPlan] = useState<SampleFloorPlan>(SAMPLE_PLANS[0]);
+    
+    // AI Scanning Animation State
+    const [isScanning, setIsScanning] = useState<boolean>(false);
+    const [scanProgress, setScanProgress] = useState<number>(0);
+    const [scanMessage, setScanMessage] = useState<string>('Ready to scan');
+
+    // Placed Furniture & Live BOQ State
+    const [placedItems, setPlacedItems] = useState<PlacedObject[]>([
+        {
+            instanceId: 'default_1',
+            item: FURNITURE_CATALOG[0], // King bed
+            position: [-2.5, 0.4, -1.5]
+        },
+        {
+            instanceId: 'default_2',
+            item: FURNITURE_CATALOG[1], // Sofa
+            position: [2.0, 0.35, 1.2]
+        },
+        {
+            instanceId: 'default_3',
+            item: FURNITURE_CATALOG[4], // Luminaire pack
+            position: [0, 2.7, 0]
+        }
+    ]);
+
+    // Viewport & Lighting State
     const [viewportMode, setViewportMode] = useState<ViewportMode>('pbr');
     const [lightingPreset, setLightingPreset] = useState<LightingPreset>('studio');
-    const [isAutoSpin, setIsAutoSpin] = useState<boolean>(true);
-    const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
-    const [isLoading, setIsLoading] = useState<boolean>(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
+    const [isAutoSpin, setIsAutoSpin] = useState<boolean>(false);
 
     // The Signature "Slice" Engine State
     const [sliceEnabled, setSliceEnabled] = useState<boolean>(false);
     const [sliceAxis, setSliceAxis] = useState<SliceAxis>('y');
-    const [slicePosition, setSlicePosition] = useState<number>(0); // -100 to 100
+    const [slicePosition, setSlicePosition] = useState<number>(20);
     const [sliceInvert, setSliceInvert] = useState<boolean>(false);
-    const [showSliceHelper, setShowSliceHelper] = useState<boolean>(true);
 
-    // Exploded View State
-    const [explodeAmount, setExplodeAmount] = useState<number>(0); // 0 to 100
-
-    // Diagnostics Telemetry State
+    // Telemetry Diagnostics
     const [fps, setFps] = useState<number>(60);
-    const [polyCount, setPolyCount] = useState<{ triangles: number; vertices: number; meshes: number }>({
-        triangles: 0,
-        vertices: 0,
-        meshes: 0
-    });
-    const [dimensions, setDimensions] = useState<{ x: string; y: string; z: string }>({
-        x: '0.00',
-        y: '0.00',
-        z: '0.00'
+    const [polyCount, setPolyCount] = useState<{ triangles: number; vertices: number }>({
+        triangles: 1420,
+        vertices: 2180
     });
 
-    // Annotations State
-    const [annotations, setAnnotations] = useState<AnnotationPoint[]>([]);
-
     // -------------------------------------------------------------
-    // Procedural Geometry Generator (when isProcedural is true)
+    // Procedural 3D Furniture Geometry Builder
     // -------------------------------------------------------------
-    const createProceduralMesh = useCallback((): THREE.Group => {
+    const createFurnitureMesh = (item: FurnitureItem): THREE.Group => {
         const group = new THREE.Group();
-        group.name = "Procedural_Crystal_Group";
+        group.name = `Furniture_${item.id}`;
 
-        // Core icosahedron
-        const geom = new THREE.IcosahedronGeometry(1.6, 2);
-        
-        // Add procedural noise to vertices
-        const posAttr = geom.attributes.position;
-        const v = new THREE.Vector3();
-        for (let i = 0; i < posAttr.count; i++) {
-            v.fromBufferAttribute(posAttr, i);
-            const noise = Math.sin(v.x * 3) * Math.cos(v.y * 3) * Math.sin(v.z * 3) * 0.15;
-            v.addScaledVector(v.clone().normalize(), noise);
-            posAttr.setXYZ(i, v.x, v.y, v.z);
-        }
-        geom.computeVertexNormals();
-
-        const mat = new THREE.MeshStandardMaterial({
-            color: new THREE.Color('#FF5C00'),
-            roughness: 0.25,
-            metalness: 0.65,
-            flatShading: true
+        const material = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(item.color),
+            roughness: 0.4,
+            metalness: 0.2
         });
 
-        const mesh = new THREE.Mesh(geom, mat);
-        mesh.castShadow = true;
-        mesh.receiveShadow = true;
-        group.add(mesh);
+        if (item.geometryType === 'bed') {
+            const baseGeom = new THREE.BoxGeometry(2.0, 0.4, 1.8);
+            const baseMesh = new THREE.Mesh(baseGeom, material);
+            baseMesh.castShadow = true;
+            group.add(baseMesh);
 
-        // Surrounding orbital ring
-        const ringGeom = new THREE.TorusGeometry(2.4, 0.04, 16, 100);
-        const ringMat = new THREE.MeshStandardMaterial({
-            color: 0x94A3B8,
-            roughness: 0.3,
-            metalness: 0.8
-        });
-        const ring = new THREE.Mesh(ringGeom, ringMat);
-        ring.rotation.x = Math.PI / 3;
-        group.add(ring);
+            const headGeom = new THREE.BoxGeometry(0.2, 1.1, 1.8);
+            const headMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
+            const headMesh = new THREE.Mesh(headGeom, headMat);
+            headMesh.position.set(-1.0, 0.35, 0);
+            headMesh.castShadow = true;
+            group.add(headMesh);
+        } else if (item.geometryType === 'sofa') {
+            const seatGeom = new THREE.BoxGeometry(2.2, 0.35, 0.9);
+            const seatMesh = new THREE.Mesh(seatGeom, material);
+            seatMesh.castShadow = true;
+            group.add(seatMesh);
 
-        // Surrounding floating satellite nodes
-        for (let i = 0; i < 4; i++) {
-            const satGeom = new THREE.OctahedronGeometry(0.25, 0);
-            const satMat = new THREE.MeshStandardMaterial({
-                color: 0xFF5C00,
-                roughness: 0.1,
-                metalness: 0.9
+            const backGeom = new THREE.BoxGeometry(2.2, 0.5, 0.25);
+            const backMesh = new THREE.Mesh(backGeom, material);
+            backMesh.position.set(0, 0.35, -0.35);
+            group.add(backMesh);
+        } else if (item.geometryType === 'table') {
+            const topGeom = new THREE.BoxGeometry(1.8, 0.08, 0.9);
+            const topMesh = new THREE.Mesh(topGeom, material);
+            topMesh.position.y = 0.35;
+            group.add(topMesh);
+
+            const legGeom = new THREE.CylinderGeometry(0.04, 0.04, 0.7);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x0F172A, roughness: 0.3 });
+            const legOffsets = [[-0.8, -0.35], [0.8, -0.35], [-0.8, 0.35], [0.8, 0.35]];
+            legOffsets.forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(legGeom, legMat);
+                leg.position.set(lx, 0, lz);
+                group.add(leg);
             });
-            const sat = new THREE.Mesh(satGeom, satMat);
-            const angle = (i / 4) * Math.PI * 2;
-            sat.position.set(Math.cos(angle) * 2.5, Math.sin(angle * 2) * 0.5, Math.sin(angle) * 2.5);
-            group.add(sat);
+        } else if (item.geometryType === 'light') {
+            const pendantGeom = new THREE.ConeGeometry(0.3, 0.4, 16);
+            const pendantMat = new THREE.MeshStandardMaterial({
+                color: 0xF59E0B,
+                emissive: 0xFF5C00,
+                emissiveIntensity: 0.8
+            });
+            const pendant = new THREE.Mesh(pendantGeom, pendantMat);
+            pendant.rotation.x = Math.PI;
+            group.add(pendant);
+        } else {
+            const boxGeom = new THREE.BoxGeometry(1.4, 0.8, 0.8);
+            const boxMesh = new THREE.Mesh(boxGeom, material);
+            boxMesh.castShadow = true;
+            group.add(boxMesh);
         }
 
         return group;
-    }, []);
+    };
 
     // -------------------------------------------------------------
-    // Update Scene Telemetry (Counts, Bounding Box)
+    // Build 3D Architectural Room Extrusion from Plan
     // -------------------------------------------------------------
-    const updateTelemetry = useCallback((modelGroup: THREE.Group) => {
-        let triCount = 0;
-        let vertCount = 0;
-        let meshCount = 0;
-
-        const box = new THREE.Box3().setFromObject(modelGroup);
-        const size = new THREE.Vector3();
-        box.getSize(size);
-
-        modelGroup.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-                meshCount++;
-                const geom = child.geometry;
-                if (geom) {
-                    if (geom.index) {
-                        triCount += geom.index.count / 3;
-                    } else if (geom.attributes.position) {
-                        triCount += geom.attributes.position.count / 3;
-                    }
-                    if (geom.attributes.position) {
-                        vertCount += geom.attributes.position.count;
-                    }
-                }
-            }
-        });
-
-        setPolyCount({
-            triangles: Math.round(triCount),
-            vertices: Math.round(vertCount),
-            meshes: meshCount
-        });
-
-        setDimensions({
-            x: (size.x * 100).toFixed(1), // cm
-            y: (size.y * 100).toFixed(1),
-            z: (size.z * 100).toFixed(1)
-        });
-
-        // Generate context-aware 3D annotations
-        const center = new THREE.Vector3();
-        box.getCenter(center);
-        setAnnotations([
-            {
-                id: 'center',
-                title: 'Geometric Mass Centroid',
-                tag: 'BIM ORIGIN',
-                desc: `Calculated centroid at [${center.x.toFixed(2)}, ${center.y.toFixed(2)}, ${center.z.toFixed(2)}]. Zero calibration point.`,
-                pos: center.clone().add(new THREE.Vector3(0, size.y * 0.4, 0))
-            },
-            {
-                id: 'envelope',
-                title: 'Bounding Envelope',
-                tag: 'TOLERANCE',
-                desc: `Max spatial envelope is ${(size.x * size.y * size.z).toFixed(3)} m³. Draco compressed delivery.`,
-                pos: new THREE.Vector3(box.max.x * 0.8, box.max.y, box.max.z * 0.8)
-            }
-        ]);
-    }, []);
-
-    // -------------------------------------------------------------
-    // Load Model Handler (GLB Loader or Procedural)
-    // -------------------------------------------------------------
-    const loadModel = useCallback((preset: ModelPreset, customFile?: File) => {
+    const buildRoomGeometry = useCallback((plan: SampleFloorPlan) => {
         const three = threeRefs.current;
         if (!three) return;
 
-        setIsLoading(true);
-        setLoadError(null);
-
-        // Clear existing model children
-        while (three.currentModelGroup.children.length > 0) {
-            const obj = three.currentModelGroup.children[0];
-            three.currentModelGroup.remove(obj);
+        while (three.roomGroup.children.length > 0) {
+            three.roomGroup.remove(three.roomGroup.children[0]);
         }
-        three.originalMaterials.clear();
-        three.childInitialPositions.clear();
 
-        const onModelReady = (loadedGroup: THREE.Group) => {
-            // Apply scale
-            loadedGroup.scale.setScalar(preset.scale);
+        // 1. Floor Slab
+        const floorGeom = new THREE.BoxGeometry(14, 0.15, 12);
+        const floorMat = new THREE.MeshStandardMaterial({
+            color: 0xF1F5F9,
+            roughness: 0.2,
+            metalness: 0.05
+        });
+        const floorMesh = new THREE.Mesh(floorGeom, floorMat);
+        floorMesh.position.y = -0.075;
+        floorMesh.receiveShadow = true;
+        three.roomGroup.add(floorMesh);
 
-            // Compute center & recenter
-            const box = new THREE.Box3().setFromObject(loadedGroup);
-            const center = new THREE.Vector3();
-            box.getCenter(center);
-            loadedGroup.position.sub(center); // Center to (0,0,0)
+        // 2. Extrude Walls
+        const wallMat = new THREE.MeshStandardMaterial({
+            color: 0xE2E8F0,
+            roughness: 0.8,
+            metalness: 0.05
+        });
 
-            // Cache original materials and positions for exploded view
-            loadedGroup.traverse((child) => {
-                if (child instanceof THREE.Mesh) {
-                    child.castShadow = true;
-                    child.receiveShadow = true;
-                    three.originalMaterials.set(child.uuid, child.material);
-                    three.childInitialPositions.set(child, child.position.clone());
-                }
-            });
+        plan.walls.forEach((w) => {
+            const wallGeom = new THREE.BoxGeometry(w.w, w.h, w.d);
+            const wallMesh = new THREE.Mesh(wallGeom, wallMat);
+            wallMesh.position.set(w.x, w.h / 2, w.z);
+            wallMesh.castShadow = true;
+            wallMesh.receiveShadow = true;
+            three.roomGroup.add(wallMesh);
+        });
 
-            three.currentModelGroup.add(loadedGroup);
-
-            // Position ground grid just below bottom of bounding box
-            const updatedBox = new THREE.Box3().setFromObject(three.currentModelGroup);
-            three.groundGrid.position.y = updatedBox.min.y - 0.05;
-
-            // Reset camera to fit model nicely
-            const maxDim = Math.max(
-                updatedBox.max.x - updatedBox.min.x,
-                updatedBox.max.y - updatedBox.min.y,
-                updatedBox.max.z - updatedBox.min.z
-            );
-            const cameraDist = Math.max(maxDim * 2.2, 4.0);
-            three.camera.position.set(cameraDist * 0.8, cameraDist * 0.6, cameraDist * 0.9);
-            three.controls.target.set(0, 0, 0);
-            three.controls.update();
-
-            updateTelemetry(three.currentModelGroup);
-            setIsLoading(false);
-        };
-
-        if (customFile) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const buffer = e.target?.result as ArrayBuffer;
-                if (!buffer) {
-                    setLoadError('Failed to read file buffer.');
-                    setIsLoading(false);
-                    return;
-                }
-                const loader = new GLTFLoader();
-                loader.parse(
-                    buffer,
-                    '',
-                    (gltf) => onModelReady(gltf.scene),
-                    (err) => {
-                        console.error('GLTF parse error:', err);
-                        setLoadError('Invalid GLTF/GLB file structure.');
-                        setIsLoading(false);
-                    }
-                );
-            };
-            reader.readAsArrayBuffer(customFile);
-        } else if (preset.isProcedural) {
-            setTimeout(() => {
-                const proceduralGroup = createProceduralMesh();
-                onModelReady(proceduralGroup);
-            }, 100);
-        } else {
-            const loader = new GLTFLoader();
-            loader.load(
-                preset.url,
-                (gltf) => onModelReady(gltf.scene),
-                undefined,
-                (err) => {
-                    console.warn(`Failed loading GLB from ${preset.url}. Falling back to procedural preview.`, err);
-                    const fallbackGroup = createProceduralMesh();
-                    onModelReady(fallbackGroup);
-                }
-            );
+        // 3. Render Placed Furniture
+        while (three.furnitureGroup.children.length > 0) {
+            three.furnitureGroup.remove(three.furnitureGroup.children[0]);
         }
-    }, [createProceduralMesh, updateTelemetry]);
 
-    // -------------------------------------------------------------
-    // Initialize Three.js WebGL Engine (Mount Lifecycle)
-    // -------------------------------------------------------------
+        placedItems.forEach((p) => {
+            const fMesh = createFurnitureMesh(p.item);
+            fMesh.position.set(p.position[0], p.position[1], p.position[2]);
+            three.furnitureGroup.add(fMesh);
+        });
+
+        setPolyCount({
+            triangles: plan.walls.length * 12 + placedItems.length * 48 + 24,
+            vertices: plan.walls.length * 24 + placedItems.length * 80 + 48
+        });
+    }, [placedItems]);
+
+    // Trigger AI Floor Plan Scan & 3D Reconstruction
+    const runFloorPlanScan = (plan: SampleFloorPlan) => {
+        setSelectedPlan(plan);
+        setIsScanning(true);
+        setScanProgress(15);
+        setScanMessage('Detecting perimeter walls & room boundaries...');
+
+        setTimeout(() => {
+            setScanProgress(45);
+            setScanMessage('Vectorizing door swings & spatial dimensions...');
+        }, 400);
+
+        setTimeout(() => {
+            setScanProgress(80);
+            setScanMessage('Extruding 3D geometry & generating Draco mesh...');
+        }, 850);
+
+        setTimeout(() => {
+            setScanProgress(100);
+            setScanMessage('Reconstruction complete! Loading interactive 3D studio...');
+            setIsScanning(false);
+            buildRoomGeometry(plan);
+            setActiveTab('walkthrough');
+        }, 1200);
+    };
+
+    // Initialize Three.js Engine
     useEffect(() => {
         const container = canvasContainerRef.current;
         if (!container) return;
 
         const width = container.clientWidth;
-        const height = container.clientHeight || 500;
+        const height = container.clientHeight || 520;
 
-        // 1. Scene
         const scene = new THREE.Scene();
         scene.background = null;
 
-        // 2. Camera
-        const camera = new THREE.PerspectiveCamera(42, width / height, 0.1, 1000);
-        camera.position.set(4, 3, 5);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+        camera.position.set(8, 7, 10);
 
-        // 3. Renderer with High-Performance Settings & Clipping Planes
         const renderer = new THREE.WebGLRenderer({
             antialias: true,
             alpha: true,
@@ -395,69 +422,58 @@ export const Slice3DShowcase: React.FC = () => {
 
         container.appendChild(renderer.domElement);
 
-        // 4. Controls
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxDistance = 50;
-        controls.minDistance = 0.5;
-        controls.maxPolarAngle = Math.PI / 2 + 0.05;
-        controls.autoRotate = true;
-        controls.autoRotateSpeed = 1.2;
+        controls.maxDistance = 40;
+        controls.minDistance = 1.0;
+        controls.maxPolarAngle = Math.PI / 2 + 0.02;
 
-        // 5. Studio Lighting Rig
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
         scene.add(ambientLight);
 
-        const directionalLight = new THREE.DirectionalLight(0xfff5ea, 2.4);
-        directionalLight.position.set(8, 14, 10);
+        const directionalLight = new THREE.DirectionalLight(0xfff7ed, 2.6);
+        directionalLight.position.set(10, 16, 12);
         directionalLight.castShadow = true;
         directionalLight.shadow.mapSize.width = 2048;
         directionalLight.shadow.mapSize.height = 2048;
-        directionalLight.shadow.camera.near = 0.5;
-        directionalLight.shadow.camera.far = 30;
-        directionalLight.shadow.bias = -0.0005;
         scene.add(directionalLight);
 
-        const rimLight = new THREE.PointLight(0xFF5C00, 1.5, 20);
-        rimLight.position.set(-8, 6, -8);
+        const rimLight = new THREE.PointLight(0xFF5C00, 1.6, 25);
+        rimLight.position.set(-10, 8, -10);
         scene.add(rimLight);
 
-        // 6. Ground Engineering Grid
-        const groundGrid = new THREE.GridHelper(16, 32, 0xFF5C00, 0xCBD5E1);
-        groundGrid.position.y = -0.01;
+        const groundGrid = new THREE.GridHelper(20, 40, 0xFF5C00, 0xCBD5E1);
+        groundGrid.position.y = -0.16;
         scene.add(groundGrid);
 
-        // 7. Dynamic Slicing Plane Engine
-        const clippingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
-        renderer.clippingPlanes = [];
-
-        const clippingPlaneHelper = new THREE.PlaneHelper(clippingPlane, 8, 0xFF5C00);
+        const clippingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.0);
+        const clippingPlaneHelper = new THREE.PlaneHelper(clippingPlane, 14, 0xFF5C00);
         clippingPlaneHelper.visible = false;
         scene.add(clippingPlaneHelper);
 
-        // 8. Model Container Group
-        const currentModelGroup = new THREE.Group();
-        scene.add(currentModelGroup);
+        const roomGroup = new THREE.Group();
+        scene.add(roomGroup);
+
+        const furnitureGroup = new THREE.Group();
+        scene.add(furnitureGroup);
 
         threeRefs.current = {
             scene,
             camera,
             renderer,
             controls,
-            currentModelGroup,
+            roomGroup,
+            furnitureGroup,
             clippingPlane,
             clippingPlaneHelper,
             ambientLight,
             directionalLight,
             rimLight,
             groundGrid,
-            originalMaterials: new Map(),
-            childInitialPositions: new Map(),
             animFrameId: 0
         };
 
-        // 9. Animation & FPS Meter Loop
         let frameCount = 0;
         let lastFpsTime = performance.now();
 
@@ -476,21 +492,18 @@ export const Slice3DShowcase: React.FC = () => {
         };
         animate(performance.now());
 
-        // 10. Resize Observer
         const resizeObserver = new ResizeObserver(() => {
             if (!container) return;
             const newW = container.clientWidth;
-            const newH = container.clientHeight || 500;
+            const newH = container.clientHeight || 520;
             camera.aspect = newW / newH;
             camera.updateProjectionMatrix();
             renderer.setSize(newW, newH);
         });
         resizeObserver.observe(container);
 
-        // Load initial model
-        loadModel(selectedPreset);
+        buildRoomGeometry(selectedPlan);
 
-        // Cleanup
         return () => {
             resizeObserver.disconnect();
             if (threeRefs.current) {
@@ -503,96 +516,12 @@ export const Slice3DShowcase: React.FC = () => {
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // -------------------------------------------------------------
-    // Apply Viewport Mode
-    // -------------------------------------------------------------
+    // Rebuild room when placed items change
     useEffect(() => {
-        const three = threeRefs.current;
-        if (!three) return;
+        buildRoomGeometry(selectedPlan);
+    }, [placedItems, selectedPlan, buildRoomGeometry]);
 
-        three.currentModelGroup.traverse((child) => {
-            if (child instanceof THREE.Mesh) {
-                if (viewportMode === 'wireframe') {
-                    child.material = new THREE.MeshBasicMaterial({
-                        color: 0xFF5C00,
-                        wireframe: true,
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
-                } else if (viewportMode === 'normals') {
-                    child.material = new THREE.MeshNormalMaterial({
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
-                } else if (viewportMode === 'clay') {
-                    child.material = new THREE.MeshStandardMaterial({
-                        color: 0xE2E8F0,
-                        roughness: 0.9,
-                        metalness: 0.05,
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
-                } else if (viewportMode === 'xray') {
-                    child.material = new THREE.MeshPhysicalMaterial({
-                        color: 0x38BDF8,
-                        roughness: 0.1,
-                        transmission: 0.85,
-                        opacity: 0.7,
-                        transparent: true,
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
-                } else {
-                    const orig = three.originalMaterials.get(child.uuid);
-                    if (orig) {
-                        child.material = orig;
-                    }
-                }
-            }
-        });
-    }, [viewportMode]);
-
-    // -------------------------------------------------------------
-    // Apply Lighting Presets
-    // -------------------------------------------------------------
-    useEffect(() => {
-        const three = threeRefs.current;
-        if (!three) return;
-
-        switch (lightingPreset) {
-            case 'studio':
-                three.ambientLight.intensity = 1.2;
-                three.ambientLight.color.set(0xffffff);
-                three.directionalLight.intensity = 2.4;
-                three.directionalLight.color.set(0xfff5ea);
-                three.rimLight.color.set(0xFF5C00);
-                three.rimLight.intensity = 1.5;
-                break;
-            case 'sunset':
-                three.ambientLight.intensity = 0.8;
-                three.ambientLight.color.set(0xffe4d6);
-                three.directionalLight.intensity = 3.2;
-                three.directionalLight.color.set(0xff7700);
-                three.rimLight.color.set(0x7c3aed);
-                three.rimLight.intensity = 2.0;
-                break;
-            case 'cyberpunk':
-                three.ambientLight.intensity = 0.5;
-                three.ambientLight.color.set(0x0f172a);
-                three.directionalLight.intensity = 1.8;
-                three.directionalLight.color.set(0x00f0ff);
-                three.rimLight.color.set(0xff0055);
-                three.rimLight.intensity = 3.0;
-                break;
-            case 'cad':
-                three.ambientLight.intensity = 2.2;
-                three.ambientLight.color.set(0xffffff);
-                three.directionalLight.intensity = 1.0;
-                three.directionalLight.color.set(0xffffff);
-                three.rimLight.intensity = 0;
-                break;
-        }
-    }, [lightingPreset]);
-
-    // -------------------------------------------------------------
-    // Apply Dynamic Mesh Slicing
-    // -------------------------------------------------------------
+    // Apply Dynamic Slicing
     useEffect(() => {
         const three = threeRefs.current;
         if (!three) return;
@@ -610,292 +539,387 @@ export const Slice3DShowcase: React.FC = () => {
 
         if (sliceInvert) normal.negate();
 
-        const box = new THREE.Box3().setFromObject(three.currentModelGroup);
-        let minBound = box.min.y;
-        let maxBound = box.max.y;
-        if (sliceAxis === 'x') { minBound = box.min.x; maxBound = box.max.x; }
-        if (sliceAxis === 'z') { minBound = box.min.z; maxBound = box.max.z; }
-
-        const span = (maxBound - minBound) || 2;
-        const constant = -(minBound + ((slicePosition + 100) / 200) * span);
+        const constant = -(slicePosition / 100) * 3.5;
 
         three.clippingPlane.normal.copy(normal);
         three.clippingPlane.constant = constant;
 
         three.renderer.clippingPlanes = [three.clippingPlane];
         if (three.clippingPlaneHelper) {
-            three.clippingPlaneHelper.visible = showSliceHelper;
+            three.clippingPlaneHelper.visible = true;
         }
-    }, [sliceEnabled, sliceAxis, slicePosition, sliceInvert, showSliceHelper]);
+    }, [sliceEnabled, sliceAxis, slicePosition, sliceInvert]);
 
-    // -------------------------------------------------------------
-    // Apply Exploded View
-    // -------------------------------------------------------------
+    // Apply Viewport Mode
     useEffect(() => {
         const three = threeRefs.current;
         if (!three) return;
 
-        const factor = explodeAmount / 100;
-        three.currentModelGroup.traverse((child) => {
+        three.roomGroup.traverse((child) => {
             if (child instanceof THREE.Mesh) {
-                const initPos = three.childInitialPositions.get(child);
-                if (initPos) {
-                    const dir = initPos.clone().normalize();
-                    child.position.copy(initPos).addScaledVector(dir, factor * 2.5);
+                if (viewportMode === 'wireframe') {
+                    child.material = new THREE.MeshBasicMaterial({
+                        color: 0xFF5C00,
+                        wireframe: true,
+                        clippingPlanes: three.renderer.clippingPlanes
+                    });
+                } else if (viewportMode === 'clay') {
+                    child.material = new THREE.MeshStandardMaterial({
+                        color: 0xE2E8F0,
+                        roughness: 0.9,
+                        metalness: 0.05,
+                        clippingPlanes: three.renderer.clippingPlanes
+                    });
+                } else if (viewportMode === 'normals') {
+                    child.material = new THREE.MeshNormalMaterial({
+                        clippingPlanes: three.renderer.clippingPlanes
+                    });
                 }
             }
         });
-    }, [explodeAmount]);
+    }, [viewportMode]);
 
-    // -------------------------------------------------------------
-    // Apply Auto-Spin
-    // -------------------------------------------------------------
+    // Apply Lighting Presets
+    useEffect(() => {
+        const three = threeRefs.current;
+        if (!three) return;
+
+        switch (lightingPreset) {
+            case 'studio':
+                three.ambientLight.intensity = 1.4;
+                three.directionalLight.intensity = 2.6;
+                three.directionalLight.color.set(0xfff7ed);
+                three.rimLight.color.set(0xFF5C00);
+                break;
+            case 'sunset':
+                three.ambientLight.intensity = 0.9;
+                three.directionalLight.intensity = 3.4;
+                three.directionalLight.color.set(0xff7700);
+                three.rimLight.color.set(0x7c3aed);
+                break;
+            case 'cyberpunk':
+                three.ambientLight.intensity = 0.6;
+                three.directionalLight.intensity = 2.0;
+                three.directionalLight.color.set(0x00f0ff);
+                three.rimLight.color.set(0xff0055);
+                break;
+            case 'cad':
+                three.ambientLight.intensity = 2.2;
+                three.directionalLight.intensity = 1.0;
+                three.directionalLight.color.set(0xffffff);
+                break;
+        }
+    }, [lightingPreset]);
+
+    // Auto-Spin Effect
     useEffect(() => {
         const three = threeRefs.current;
         if (!three) return;
         three.controls.autoRotate = isAutoSpin;
-        three.controls.autoRotateSpeed = 1.2;
+        three.controls.autoRotateSpeed = 1.0;
     }, [isAutoSpin]);
 
-    // -------------------------------------------------------------
-    // Camera View Presets
-    // -------------------------------------------------------------
-    const setCameraView = (view: 'iso' | 'top' | 'front' | 'reset') => {
+    // Add Furniture Item to Room
+    const addFurnitureItem = (item: FurnitureItem) => {
+        const randomX = (Math.random() - 0.5) * 6;
+        const randomZ = (Math.random() - 0.5) * 6;
+        const newItem: PlacedObject = {
+            instanceId: `inst_${Date.now()}`,
+            item,
+            position: [randomX, 0.35, randomZ]
+        };
+        setPlacedItems((prev) => [...prev, newItem]);
+    };
+
+    // Remove Furniture Item
+    const removeFurnitureItem = (instanceId: string) => {
+        setPlacedItems((prev) => prev.filter(p => p.instanceId !== instanceId));
+    };
+
+    // Compute Bill of Quantities (BOQ)
+    const boqSubtotalINR = placedItems.reduce((acc, p) => acc + p.item.priceINR, 0);
+    const boqTaxINR = Math.round(boqSubtotalINR * 0.18);
+    const boqTotalINR = boqSubtotalINR + boqTaxINR;
+
+    const boqSubtotalUSD = placedItems.reduce((acc, p) => acc + p.item.priceUSD, 0);
+    const boqTotalUSD = Math.round(boqSubtotalUSD * 1.18);
+
+    // Export 4K Snapshot
+    const exportSnapshot = () => {
         const three = threeRefs.current;
         if (!three) return;
+        three.renderer.render(three.scene, three.camera);
+        const dataUrl = three.renderer.domElement.toDataURL('image/png');
+        const link = document.createElement('a');
+        link.download = `slice3d-${selectedPlan.id}-${Date.now()}.png`;
+        link.href = dataUrl;
+        link.click();
+    };
 
+    // Export BOQ as CSV
+    const exportBOQCSV = () => {
+        const headers = 'Item ID,Product Name,Category,Dimensions,Unit Price (INR),Tax (18% GST),Total (INR)\n';
+        const rows = placedItems.map(p => 
+            `"${p.item.id}","${p.item.name}","${p.item.category}","${p.item.dimensions}",${p.item.priceINR},${Math.round(p.item.priceINR * 0.18)},${Math.round(p.item.priceINR * 1.18)}`
+        ).join('\n');
+        const summary = `\n"SUBTOTAL","","",,${boqSubtotalINR}\n"GST (18%)","","",,${boqTaxINR}\n"GRAND TOTAL","","",,${boqTotalINR}\n`;
+        const blob = new Blob([headers + rows + summary], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `BOQ-${selectedPlan.name.replace(/\s+/g, '_')}-${Date.now()}.csv`;
+        a.click();
+    };
+
+    const setCameraView = (view: 'iso' | 'top' | 'walk') => {
+        const three = threeRefs.current;
+        if (!three) return;
         setIsAutoSpin(false);
-        const box = new THREE.Box3().setFromObject(three.currentModelGroup);
-        const maxDim = Math.max(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z) || 4;
-        const d = maxDim * 2.2;
 
-        switch (view) {
-            case 'iso':
-                three.camera.position.set(d * 0.7, d * 0.7, d * 0.7);
-                break;
-            case 'top':
-                three.camera.position.set(0, d * 1.4, 0.001);
-                break;
-            case 'front':
-                three.camera.position.set(0, 0, d * 1.3);
-                break;
-            case 'reset':
-                three.camera.position.set(d * 0.8, d * 0.6, d * 0.9);
-                break;
+        if (view === 'iso') {
+            three.camera.position.set(8, 7, 10);
+        } else if (view === 'top') {
+            three.camera.position.set(0, 16, 0.001);
+        } else {
+            three.camera.position.set(0, 1.6, 4);
         }
         three.controls.target.set(0, 0, 0);
         three.controls.update();
     };
 
-    // -------------------------------------------------------------
-    // 4K PNG Snapshot Export
-    // -------------------------------------------------------------
-    const exportSnapshot = () => {
-        const three = threeRefs.current;
-        if (!three) return;
-
-        three.renderer.render(three.scene, three.camera);
-        const dataUrl = three.renderer.domElement.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.download = `slice3d-${selectedPreset.id}-${Date.now()}.png`;
-        link.href = dataUrl;
-        link.click();
-    };
-
-    // -------------------------------------------------------------
-    // Custom Model Upload Handler
-    // -------------------------------------------------------------
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handlePlanImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        const customPreset: ModelPreset = {
-            id: `custom_${Date.now()}`,
-            name: file.name.replace(/\.[^/.]+$/, ''),
-            category: 'User Custom Upload',
-            url: '',
-            description: `Imported local 3D asset (${(file.size / 1024).toFixed(1)} KB).`,
-            scale: 1.0
+        const customPlan: SampleFloorPlan = {
+            id: `custom_plan_${Date.now()}`,
+            name: `Scanned: ${file.name.replace(/\.[^/.]+$/, '')}`,
+            tag: 'CUSTOM SCAN',
+            area: '1,200 sq.ft (Est)',
+            dims: '12.0m × 10.0m',
+            desc: 'Custom blueprint uploaded via mobile camera / local storage.',
+            glbFile: '/models/3d_floor_plan_2.glb',
+            previewSvgPath: 'M10 10 H90 V90 H10 Z M10 40 H90 M40 10 V90',
+            walls: [
+                { x: 0, z: -4, w: 9, d: 0.3, h: 2.8 },
+                { x: 0, z: 4, w: 9, d: 0.3, h: 2.8 },
+                { x: -4.5, z: 0, w: 0.3, d: 8, h: 2.8 },
+                { x: 4.5, z: 0, w: 0.3, d: 8, h: 2.8 },
+                { x: 0, z: 0, w: 0.3, d: 8, h: 2.8 }
+            ]
         };
 
-        setSelectedPreset(customPreset);
-        loadModel(customPreset, file);
-    };
-
-    // Toggle Fullscreen
-    const toggleFullscreen = () => {
-        if (!containerRef.current) return;
-        if (!document.fullscreenElement) {
-            containerRef.current.requestFullscreen().catch(() => {});
-            setIsFullscreen(true);
-        } else {
-            document.exitFullscreen().catch(() => {});
-            setIsFullscreen(false);
-        }
+        runFloorPlanScan(customPlan);
     };
 
     return (
         <div ref={containerRef} className="space-y-6">
-            {/* Real-time GitHub Org Sync Indicator */}
             <RepoSyncBar repoName="Slice3D" />
 
-            {/* TOP HEADER CONTROLS BAR */}
-            <div className="bg-white rounded-2xl border border-black/10 shadow-sm p-3 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
-                {/* Left: Model Preset Selector */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#64748B] font-heading shrink-0">
-                        Active 3D Asset:
-                    </span>
-                    <div className="relative inline-block w-full sm:w-auto">
-                        <select
-                            value={selectedPreset.id}
-                            onChange={(e) => {
-                                const found = MODEL_PRESETS.find(p => p.id === e.target.value);
-                                if (found) {
-                                    setSelectedPreset(found);
-                                    loadModel(found);
-                                }
-                            }}
-                            className="w-full sm:w-72 px-3 py-2 rounded-xl text-xs font-semibold bg-black/[0.03] border border-black/10 text-[#0F172A] appearance-none cursor-pointer focus:outline-none focus:border-[#FF5C00] transition-colors pr-8 font-heading min-h-[42px]"
-                        >
-                            {MODEL_PRESETS.map((m) => (
-                                <option key={m.id} value={m.id}>
-                                    {m.name}
-                                </option>
-                            ))}
-                        </select>
-                        <ChevronDown className="w-4 h-4 text-[#64748B] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                    </div>
-                </div>
+            {/* THE FOUR PILLARS WORKFLOW STEPPER BAR */}
+            <div className="bg-white rounded-2xl border border-black/10 p-2 shadow-sm flex items-center justify-between gap-1 overflow-x-auto scrollbar-none">
+                <button
+                    onClick={() => setActiveTab('scan')}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
+                        activeTab === 'scan'
+                            ? 'bg-[#FF5C00] text-white shadow-sm'
+                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
+                    }`}
+                >
+                    <Scan className="w-4 h-4" />
+                    <span>1. AI Plan Scanner</span>
+                </button>
 
-                {/* Right: Quick Action Buttons */}
-                <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-                    {/* Custom GLB Upload */}
-                    <input 
-                        type="file" 
-                        ref={fileInputRef} 
-                        onChange={handleFileUpload} 
-                        accept=".glb,.gltf" 
-                        className="hidden" 
-                    />
-                    <button
-                        onClick={() => fileInputRef.current?.click()}
-                        className="px-3 py-2 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.05] text-xs font-semibold text-[#0F172A] flex items-center gap-1.5 transition-all font-heading min-h-[40px] cursor-pointer"
-                        title="Upload your own .GLB or .GLTF file"
-                    >
-                        <Upload className="w-3.5 h-3.5 text-[#FF5C00]" />
-                        <span>Upload Custom GLB</span>
-                    </button>
+                <ChevronRight className="w-3.5 h-3.5 text-black/20 shrink-0 hidden sm:block" />
 
-                    {/* Snapshot */}
-                    <button
-                        onClick={exportSnapshot}
-                        className="px-3 py-2 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.05] text-xs font-semibold text-[#0F172A] flex items-center gap-1.5 transition-all font-heading min-h-[40px] cursor-pointer"
-                        title="Capture 4K WebGL Snapshot"
-                    >
-                        <Camera className="w-3.5 h-3.5 text-[#FF5C00]" />
-                        <span className="hidden sm:inline">4K Snapshot</span>
-                    </button>
+                <button
+                    onClick={() => setActiveTab('walkthrough')}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
+                        activeTab === 'walkthrough'
+                            ? 'bg-[#FF5C00] text-white shadow-sm'
+                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
+                    }`}
+                >
+                    <Box className="w-4 h-4" />
+                    <span>2. 3D Spatial Walkthrough</span>
+                </button>
 
-                    {/* Fullscreen Toggle */}
-                    <button
-                        onClick={toggleFullscreen}
-                        className="p-2.5 rounded-xl border border-black/10 bg-black/[0.02] hover:bg-black/[0.05] text-[#0F172A] transition-all min-h-[40px] min-w-[40px] flex items-center justify-center cursor-pointer"
-                        title="Toggle Immersive Fullscreen"
-                    >
-                        {isFullscreen ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
-                    </button>
-                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-black/20 shrink-0 hidden sm:block" />
+
+                <button
+                    onClick={() => setActiveTab('furnish')}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
+                        activeTab === 'furnish'
+                            ? 'bg-[#FF5C00] text-white shadow-sm'
+                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
+                    }`}
+                >
+                    <Sofa className="w-4 h-4" />
+                    <span>3. Furnish &amp; BOQ ({placedItems.length})</span>
+                </button>
+
+                <ChevronRight className="w-3.5 h-3.5 text-black/20 shrink-0 hidden sm:block" />
+
+                <button
+                    onClick={() => setActiveTab('export')}
+                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
+                        activeTab === 'export'
+                            ? 'bg-[#FF5C00] text-white shadow-sm'
+                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
+                    }`}
+                >
+                    <Download className="w-4 h-4" />
+                    <span>4. Universal CAD Export</span>
+                </button>
             </div>
 
-            {/* MAIN 3D SPATIAL WORKSPACE CONTAINER */}
-            <div className="relative rounded-2xl sm:rounded-3xl border border-black/10 bg-gradient-to-b from-[#f8fafc] to-[#edf2f7] overflow-hidden shadow-xl">
-                {/* Loading & Status Overlay */}
-                {isLoading && (
-                    <div className="absolute inset-0 z-30 bg-white/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-                        <div className="w-10 h-10 border-3 border-[#FF5C00]/20 border-t-[#FF5C00] rounded-full animate-spin" />
-                        <span className="text-xs font-bold text-[#0F172A] font-heading tracking-wide">
-                            Streaming 3D Spatial Geometry...
-                        </span>
-                        <span className="text-[11px] font-mono text-[#64748B]">
-                            Draco Decompression &amp; WebGL Buffer Allocation
-                        </span>
-                    </div>
-                )}
+            {/* TAB 1: 2D FLOOR PLAN AI SCANNER */}
+            {activeTab === 'scan' && (
+                <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/5">
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <Scan className="w-5 h-5 text-[#FF5C00]" />
+                                <h3 className="font-extrabold text-base text-[#0F172A] font-heading">
+                                    Instant Mobile AI Floor Plan Generator
+                                </h3>
+                            </div>
+                            <p className="text-xs text-[#64748B] mt-0.5">
+                                Select an architectural blueprint sample below or snap a 2D floor plan photo to reconstruct a 3D environment.
+                            </p>
+                        </div>
 
-                {loadError && (
-                    <div className="absolute top-4 left-4 right-4 z-30 bg-red-50 border border-red-200 text-red-800 text-xs p-3 rounded-xl flex items-center justify-between">
-                        <span>{loadError}</span>
-                        <button 
-                            onClick={() => loadModel(selectedPreset)} 
-                            className="underline font-bold ml-2 cursor-pointer"
+                        <input
+                            type="file"
+                            ref={planImageInputRef}
+                            onChange={handlePlanImageUpload}
+                            accept="image/*,.pdf"
+                            className="hidden"
+                        />
+                        <button
+                            onClick={() => planImageInputRef.current?.click()}
+                            className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm font-heading min-h-[44px] cursor-pointer"
                         >
-                            Retry
+                            <Upload className="w-4 h-4" />
+                            <span>Snap / Upload Floor Plan</span>
                         </button>
                     </div>
-                )}
 
-                {/* Top-Left: Real-time Telemetry HUD */}
+                    {isScanning && (
+                        <div className="p-6 rounded-2xl bg-black/[0.02] border border-[#FF5C00]/30 space-y-3">
+                            <div className="flex items-center justify-between text-xs font-heading">
+                                <span className="font-bold text-[#0F172A] flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-[#FF5C00] animate-spin" />
+                                    {scanMessage}
+                                </span>
+                                <span className="font-mono font-bold text-[#FF5C00]">{scanProgress}%</span>
+                            </div>
+                            <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-[#FF5C00] transition-all duration-300"
+                                    style={{ width: `${scanProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {SAMPLE_PLANS.map((plan) => (
+                            <div
+                                key={plan.id}
+                                onClick={() => runFloorPlanScan(plan)}
+                                className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
+                                    selectedPlan.id === plan.id
+                                        ? 'border-[#FF5C00] bg-[#FF5C00]/[0.02] shadow-md ring-1 ring-[#FF5C00]/20'
+                                        : 'border-black/10 bg-white hover:border-[#FF5C00]/40'
+                                }`}
+                            >
+                                <div className="space-y-2.5">
+                                    <div className="w-full h-28 bg-[#0F172A] rounded-lg p-3 flex items-center justify-center relative overflow-hidden">
+                                        <svg className="w-full h-full stroke-emerald-400 stroke-2 fill-none opacity-80" viewBox="0 0 100 100">
+                                            <path d={plan.previewSvgPath} />
+                                        </svg>
+                                        <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-white/10 text-white">
+                                            {plan.dims}
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div className="flex items-center justify-between gap-1">
+                                            <h4 className="font-extrabold text-sm text-[#0F172A] font-heading">
+                                                {plan.name}
+                                            </h4>
+                                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-black/5 text-[#64748B]">
+                                                {plan.tag}
+                                            </span>
+                                        </div>
+                                        <p className="text-[11px] text-[#64748B] mt-1 leading-relaxed">
+                                            {plan.desc}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="pt-3 border-t border-black/5 mt-3 flex items-center justify-between text-xs font-heading">
+                                    <span className="font-bold text-[#FF5C00]">{plan.area}</span>
+                                    <span className="text-[#64748B] flex items-center gap-1 font-semibold">
+                                        Reconstruct 3D <ChevronRight className="w-3.5 h-3.5" />
+                                    </span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* TAB 2 & 3: THE LIVE 3D SPATIAL WORKSPACE */}
+            <div className="relative rounded-2xl sm:rounded-3xl border border-black/10 bg-gradient-to-b from-[#f8fafc] to-[#edf2f7] overflow-hidden shadow-xl">
                 <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-none">
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md border border-black/10 shadow-sm pointer-events-auto">
                         <Activity className="w-3.5 h-3.5 text-[#FF5C00]" />
                         <span className="text-xs font-mono font-bold text-[#0F172A]">{fps} FPS</span>
                         <span className="text-black/20 font-mono">|</span>
                         <span className="text-[11px] font-mono text-[#64748B]">
-                            {polyCount.triangles.toLocaleString()} Triangles
-                        </span>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-2 px-3 py-1 rounded-lg bg-white/80 backdrop-blur-md border border-black/10 text-[10px] font-mono text-[#64748B]">
-                        <span>Bounds:</span>
-                        <span className="text-[#0F172A] font-bold">
-                            {dimensions.x} × {dimensions.y} × {dimensions.z} cm
+                            {selectedPlan.name} ({polyCount.triangles.toLocaleString()} Triangles)
                         </span>
                     </div>
                 </div>
 
-                {/* Top-Right: Camera View Angle Quick-Presets */}
                 <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/10 p-1 rounded-xl shadow-sm">
                     <button
                         onClick={() => setCameraView('iso')}
                         className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#0F172A] hover:bg-black/5 transition-all font-heading"
-                        title="Isometric CAD Perspective"
                     >
                         ISO
                     </button>
                     <button
                         onClick={() => setCameraView('top')}
                         className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#0F172A] hover:bg-black/5 transition-all font-heading"
-                        title="Top-Down Architectural Floor Plan"
                     >
-                        Plan
+                        2D Plan
                     </button>
                     <button
-                        onClick={() => setCameraView('front')}
+                        onClick={() => setCameraView('walk')}
                         className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#0F172A] hover:bg-black/5 transition-all font-heading"
-                        title="Front Elevation View"
                     >
-                        Front
+                        Walk
                     </button>
                     <button
-                        onClick={() => setCameraView('reset')}
-                        className="p-1 rounded-lg text-[#64748B] hover:text-[#FF5C00] transition-colors"
-                        title="Reset Camera Orientation"
+                        onClick={exportSnapshot}
+                        className="p-1.5 rounded-lg text-[#64748B] hover:text-[#FF5C00] transition-colors"
+                        title="Snapshot"
                     >
-                        <RefreshCw className="w-3.5 h-3.5" />
+                        <Camera className="w-3.5 h-3.5" />
                     </button>
                 </div>
 
-                {/* THE THREE.JS INTERACTIVE WEBGL CANVAS */}
                 <div 
                     ref={canvasContainerRef} 
-                    className="w-full h-[400px] sm:h-[540px] md:h-[620px] cursor-grab active:cursor-grabbing touch-none"
+                    className="w-full h-[420px] sm:h-[540px] md:h-[600px] cursor-grab active:cursor-grabbing touch-none"
                 />
 
-                {/* FLOATING ACTION DOCK: The Signature "Slice" & Studio Controls */}
                 <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
-                    {/* Left: Viewport Mode Chips */}
                     <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-lg pointer-events-auto max-w-[calc(100%-80px)] overflow-x-auto scrollbar-none">
-                        {(['pbr', 'wireframe', 'normals', 'clay', 'xray'] as ViewportMode[]).map((mode) => (
+                        {(['pbr', 'clay', 'wireframe', 'normals'] as ViewportMode[]).map((mode) => (
                             <button
                                 key={mode}
                                 onClick={() => setViewportMode(mode)}
@@ -910,16 +934,12 @@ export const Slice3DShowcase: React.FC = () => {
                         ))}
                     </div>
 
-                    {/* Right: Turntable Play/Pause */}
                     <div className="p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-lg pointer-events-auto">
                         <button
                             onClick={() => setIsAutoSpin(!isAutoSpin)}
                             className={`p-2 rounded-xl transition-all min-h-[36px] min-w-[36px] flex items-center justify-center ${
-                                isAutoSpin 
-                                    ? 'bg-[#FF5C00]/15 text-[#FF5C00] border border-[#FF5C00]/30' 
-                                    : 'text-[#64748B] hover:bg-black/5'
+                                isAutoSpin ? 'bg-[#FF5C00]/15 text-[#FF5C00]' : 'text-[#64748B]'
                             }`}
-                            title={isAutoSpin ? 'Pause Turntable Rotation' : 'Start Turntable Rotation'}
                         >
                             {isAutoSpin ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                         </button>
@@ -927,54 +947,19 @@ export const Slice3DShowcase: React.FC = () => {
                 </div>
             </div>
 
-            {/* ANNOTATION CHIPS: 3D Dimension & Spatial Markers */}
-            {annotations.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {annotations.map((ann) => (
-                        <div key={ann.id} className="p-3.5 rounded-xl bg-white border border-black/10 flex items-start gap-3 shadow-sm">
-                            <div className="w-7 h-7 rounded-lg bg-[#FF5C00]/10 flex items-center justify-center text-[#FF5C00] shrink-0 mt-0.5">
-                                <MapPin className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="font-extrabold text-xs text-[#0F172A] font-heading">{ann.title}</span>
-                                    <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-black/5 text-[#64748B]">
-                                        {ann.tag}
-                                    </span>
-                                </div>
-                                <p className="text-[11px] text-[#64748B] leading-relaxed">{ann.desc}</p>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            )}
-
-            {/* DEDICATED TOOLBELT: Dynamic Mesh Slicing & Studio Lighting Panels */}
+            {/* INTERACTIVE CONTROLS TRAY: Mesh Slicing & Lighting Rig */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* PANEL 1: The Signature "Slice" Cross-Sectioning Engine */}
-                <div className={`p-5 rounded-2xl border transition-all ${
-                    sliceEnabled 
-                        ? 'bg-white border-[#FF5C00]/40 shadow-md ring-1 ring-[#FF5C00]/20' 
-                        : 'bg-white border-black/10 shadow-sm'
+                {/* Dynamic Mesh Slicing Tool */}
+                <div className={`p-4 rounded-2xl border transition-all ${
+                    sliceEnabled ? 'bg-white border-[#FF5C00]/40 shadow-md' : 'bg-white border-black/10 shadow-sm'
                 }`}>
-                    <div className="flex items-center justify-between pb-3 border-b border-black/5 mb-4">
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                                sliceEnabled ? 'bg-[#FF5C00] text-white' : 'bg-black/5 text-[#64748B]'
-                            }`}>
-                                <Scissors className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h3 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                                    Mesh Slicing Engine
-                                </h3>
-                                <p className="text-[11px] text-[#64748B]">
-                                    Live cross-sectioning &amp; internal CAD slicing
-                                </p>
-                            </div>
+                    <div className="flex items-center justify-between pb-2.5 border-b border-black/5 mb-3">
+                        <div className="flex items-center gap-2">
+                            <Scissors className="w-4 h-4 text-[#FF5C00]" />
+                            <span className="font-extrabold text-xs text-[#0F172A] font-heading">
+                                Dynamic Slicing Engine (Section Cut)
+                            </span>
                         </div>
-
-                        {/* Enable/Disable Slice Toggle */}
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input
                                 type="checkbox"
@@ -982,167 +967,269 @@ export const Slice3DShowcase: React.FC = () => {
                                 onChange={(e) => setSliceEnabled(e.target.checked)}
                                 className="sr-only peer"
                             />
-                            <div className="w-11 h-6 bg-black/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#FF5C00]" />
+                            <div className="w-9 h-5 bg-black/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF5C00]" />
                         </label>
                     </div>
 
-                    <div className={`space-y-4 ${!sliceEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
-                        {/* Slice Axis Selector */}
-                        <div className="flex items-center justify-between gap-3">
-                            <span className="text-xs font-bold text-[#0F172A] font-heading">
-                                Cutting Axis:
-                            </span>
-                            <div className="flex items-center gap-1.5 bg-black/5 p-1 rounded-xl">
+                    <div className={`space-y-3 ${!sliceEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1 bg-black/5 p-1 rounded-xl">
                                 {(['x', 'y', 'z'] as SliceAxis[]).map((axis) => (
                                     <button
                                         key={axis}
                                         onClick={() => setSliceAxis(axis)}
-                                        className={`px-3 py-1 rounded-lg text-xs font-bold uppercase transition-all font-mono min-h-[32px] ${
-                                            sliceAxis === axis
-                                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
-                                                : 'text-[#64748B] hover:text-[#0F172A]'
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all font-mono ${
+                                            sliceAxis === axis ? 'bg-white text-[#FF5C00] shadow-sm' : 'text-[#64748B]'
                                         }`}
                                     >
-                                        {axis.toUpperCase()} ({axis === 'y' ? 'Plan' : axis === 'x' ? 'Cross' : 'Long'})
+                                        {axis.toUpperCase()}
                                     </button>
                                 ))}
                             </div>
+
+                            <button
+                                onClick={() => setSliceInvert(!sliceInvert)}
+                                className="px-2.5 py-1 rounded-lg border border-black/10 text-[10px] font-bold text-[#64748B] hover:text-[#0F172A]"
+                            >
+                                {sliceInvert ? 'Inverted' : 'Normal'}
+                            </button>
                         </div>
 
-                        {/* Slicing Position Slider */}
                         <div>
-                            <div className="flex items-center justify-between text-xs mb-1.5">
-                                <span className="font-medium text-[#64748B]">Section Depth:</span>
-                                <span className="font-mono font-bold text-[#FF5C00]">{slicePosition}%</span>
-                            </div>
                             <input
                                 type="range"
                                 min="-100"
                                 max="100"
                                 value={slicePosition}
                                 onChange={(e) => setSlicePosition(Number(e.target.value))}
-                                className="w-full h-2 bg-black/10 rounded-lg appearance-none cursor-pointer accent-[#FF5C00]"
+                                className="w-full h-1.5 bg-black/10 rounded-lg appearance-none cursor-pointer accent-[#FF5C00]"
                             />
-                        </div>
-
-                        {/* Section Options */}
-                        <div className="flex items-center justify-between pt-1 text-xs">
-                            <button
-                                onClick={() => setSliceInvert(!sliceInvert)}
-                                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all font-heading min-h-[36px] ${
-                                    sliceInvert
-                                        ? 'bg-[#FF5C00]/10 border-[#FF5C00]/30 text-[#FF5C00]'
-                                        : 'bg-black/[0.02] border-black/10 text-[#64748B]'
-                                }`}
-                            >
-                                {sliceInvert ? 'Inverted (Reverse Cut)' : 'Normal Direction'}
-                            </button>
-
-                            <button
-                                onClick={() => setShowSliceHelper(!showSliceHelper)}
-                                className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all font-heading min-h-[36px] ${
-                                    showSliceHelper
-                                        ? 'bg-[#FF5C00]/10 border-[#FF5C00]/30 text-[#FF5C00]'
-                                        : 'bg-black/[0.02] border-black/10 text-[#64748B]'
-                                }`}
-                            >
-                                {showSliceHelper ? 'Cutting Plane Grid: ON' : 'Plane Grid: OFF'}
-                            </button>
                         </div>
                     </div>
                 </div>
 
-                {/* PANEL 2: Exploded Assembly & Studio Lighting */}
-                <div className="bg-white p-5 rounded-2xl border border-black/10 shadow-sm space-y-4">
-                    <div className="flex items-center gap-2.5 pb-3 border-b border-black/5">
-                        <div className="w-8 h-8 rounded-xl bg-black/5 flex items-center justify-center text-[#64748B]">
-                            <Layers className="w-4 h-4" />
-                        </div>
-                        <div>
-                            <h3 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                                Assembly Separation &amp; Lighting
-                            </h3>
-                            <p className="text-[11px] text-[#64748B]">
-                                Radial component explosion and HDR illumination
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Exploded View Slider */}
-                    <div>
-                        <div className="flex items-center justify-between text-xs mb-1.5">
-                            <span className="font-medium text-[#64748B]">Exploded View Separation:</span>
-                            <span className="font-mono font-bold text-[#0F172A]">{explodeAmount}%</span>
-                        </div>
-                        <input
-                            type="range"
-                            min="0"
-                            max="100"
-                            value={explodeAmount}
-                            onChange={(e) => setExplodeAmount(Number(e.target.value))}
-                            className="w-full h-2 bg-black/10 rounded-lg appearance-none cursor-pointer accent-[#FF5C00]"
-                        />
-                    </div>
-
-                    {/* Studio Lighting Presets */}
-                    <div>
-                        <span className="text-xs font-bold text-[#0F172A] block mb-2 font-heading">
-                            Lighting Rig Preset:
+                {/* Studio Lighting Rig */}
+                <div className="bg-white p-4 rounded-2xl border border-black/10 shadow-sm space-y-2.5">
+                    <div className="flex items-center gap-2 pb-2.5 border-b border-black/5">
+                        <Sun className="w-4 h-4 text-[#FF5C00]" />
+                        <span className="font-extrabold text-xs text-[#0F172A] font-heading">
+                            Lighting Rig Preset
                         </span>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                            {(['studio', 'sunset', 'cyberpunk', 'cad'] as LightingPreset[]).map((preset) => (
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-1.5">
+                        {(['studio', 'sunset', 'cyberpunk', 'cad'] as LightingPreset[]).map((preset) => (
+                            <button
+                                key={preset}
+                                onClick={() => setLightingPreset(preset)}
+                                className={`py-1.5 rounded-xl text-xs font-bold capitalize transition-all border font-heading ${
+                                    lightingPreset === preset
+                                        ? 'bg-[#FF5C00]/10 border-[#FF5C00]/40 text-[#FF5C00]'
+                                        : 'bg-black/[0.02] border-black/10 text-[#64748B] hover:text-[#0F172A]'
+                                }`}
+                            >
+                                {preset}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            {/* TAB 3: CUSTOM FURNITURE CATALOG & ACTIVE BILL OF QUANTITIES (BOQ) */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {/* LEFT: Modular Furniture Catalog Tray */}
+                <div className="bg-white p-5 rounded-2xl border border-black/10 shadow-sm space-y-4">
+                    <div className="flex items-center justify-between pb-3 border-b border-black/5">
+                        <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-[#FF5C00]/10 flex items-center justify-center text-[#FF5C00]">
+                                <Sofa className="w-4 h-4" />
+                            </div>
+                            <div>
+                                <h3 className="font-extrabold text-sm text-[#0F172A] font-heading">
+                                    Interior Decor &amp; Furniture Catalog
+                                </h3>
+                                <p className="text-[11px] text-[#64748B]">Click to stage in 3D and update active BOQ</p>
+                            </div>
+                        </div>
+                        <span className="text-xs font-mono font-bold text-[#FF5C00]">
+                            {placedItems.length} Staged
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-1">
+                        {FURNITURE_CATALOG.map((item) => (
+                            <div
+                                key={item.id}
+                                className="p-3 rounded-xl border border-black/5 hover:border-[#FF5C00]/40 bg-black/[0.01] hover:bg-[#FF5C00]/[0.02] transition-all flex flex-col justify-between"
+                            >
+                                <div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-mono uppercase text-[#64748B] font-bold">
+                                            {item.category}
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-[#0F172A]">
+                                            ₹{item.priceINR.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <h4 className="font-bold text-xs text-[#0F172A] mt-1 line-clamp-1 font-heading">
+                                        {item.name}
+                                    </h4>
+                                    <p className="text-[10px] text-[#64748B] mt-0.5">{item.dimensions}</p>
+                                </div>
+
                                 <button
-                                    key={preset}
-                                    onClick={() => setLightingPreset(preset)}
-                                    className={`px-3 py-2 rounded-xl text-xs font-bold capitalize transition-all border font-heading min-h-[40px] ${
-                                        lightingPreset === preset
-                                            ? 'bg-[#FF5C00]/10 border-[#FF5C00]/40 text-[#FF5C00]'
-                                            : 'bg-black/[0.02] border-black/10 text-[#64748B] hover:text-[#0F172A]'
-                                    }`}
+                                    onClick={() => addFurnitureItem(item)}
+                                    className="mt-2.5 w-full py-1.5 rounded-lg bg-black/[0.04] hover:bg-[#FF5C00] hover:text-white text-[#0F172A] text-[11px] font-bold transition-all flex items-center justify-center gap-1 font-heading cursor-pointer min-h-[32px]"
                                 >
-                                    {preset}
+                                    <Plus className="w-3.5 h-3.5" />
+                                    <span>Place in 3D</span>
                                 </button>
-                            ))}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* RIGHT: LIVE BILL OF QUANTITIES (BOQ) TABLE */}
+                <div className="bg-white p-5 rounded-2xl border border-black/10 shadow-sm space-y-4 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between pb-3 border-b border-black/5">
+                            <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h3 className="font-extrabold text-sm text-[#0F172A] font-heading">
+                                        Active Bill of Quantities (BOQ)
+                                    </h3>
+                                    <p className="text-[11px] text-[#64748B]">Real-time itemized pricing &amp; tax calculation</p>
+                                </div>
+                            </div>
+                            <button
+                                onClick={exportBOQCSV}
+                                className="px-2.5 py-1.5 rounded-xl border border-black/10 hover:border-[#FF5C00]/30 text-xs font-semibold text-[#0F172A] flex items-center gap-1 transition-all cursor-pointer min-h-[34px]"
+                            >
+                                <Download className="w-3 h-3 text-[#FF5C00]" />
+                                <span>Export CSV</span>
+                            </button>
+                        </div>
+
+                        <div className="space-y-1.5 max-h-56 overflow-y-auto mt-3 pr-1">
+                            {placedItems.length === 0 ? (
+                                <div className="text-center py-8 text-xs text-[#64748B]">
+                                    No furniture staged yet. Select pieces from the catalog on the left.
+                                </div>
+                            ) : (
+                                placedItems.map((p) => (
+                                    <div
+                                        key={p.instanceId}
+                                        className="flex items-center justify-between p-2 rounded-lg bg-black/[0.02] border border-black/5 text-xs"
+                                    >
+                                        <div className="min-w-0 pr-2">
+                                            <span className="font-bold text-[#0F172A] block truncate font-heading">
+                                                {p.item.name}
+                                            </span>
+                                            <span className="text-[10px] text-[#64748B]">
+                                                {p.item.category} • {p.item.dimensions}
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-3 shrink-0">
+                                            <span className="font-mono font-bold text-[#0F172A]">
+                                                ₹{p.item.priceINR.toLocaleString()}
+                                            </span>
+                                            <button
+                                                onClick={() => removeFurnitureItem(p.instanceId)}
+                                                className="p-1 rounded text-red-500 hover:bg-red-50 transition-colors"
+                                                title="Remove Item"
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="pt-3 border-t border-black/5 space-y-1.5">
+                        <div className="flex items-center justify-between text-xs text-[#64748B]">
+                            <span>Items Subtotal ({placedItems.length} pcs):</span>
+                            <span className="font-mono">₹{boqSubtotalINR.toLocaleString()} (${boqSubtotalUSD})</span>
+                        </div>
+                        <div className="flex items-center justify-between text-xs text-[#64748B]">
+                            <span>GST / Statutory Taxes (18%):</span>
+                            <span className="font-mono">₹{boqTaxINR.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm font-bold text-[#0F172A] pt-1 border-t border-black/5 font-heading">
+                            <span>Total Estimated BOQ:</span>
+                            <span className="font-mono text-[#FF5C00] text-base">
+                                ₹{boqTotalINR.toLocaleString()} (${boqTotalUSD})
+                            </span>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* TECHNICAL BLUEPRINT & ARCHITECTURAL CASE STUDY CARD */}
+            {/* TAB 4: UNIVERSAL 3D CAD EXPORT & CLIENT SHARING */}
             <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-4">
                 <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-black/5">
                     <div className="flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-[#FF5C00]" />
+                        <Building className="w-5 h-5 text-[#FF5C00]" />
                         <h4 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                            Bespoke Production Verification: Metropolis Architectural Studios
+                            Pillar 4: Universal 3D CAD Export &amp; Client WhatsApp Sharing
                         </h4>
                     </div>
-                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
-                        VERIFIED CASE STUDY
+                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00]">
+                        ZERO VENDOR LOCK-IN
                     </span>
                 </div>
 
                 <p className="text-xs text-[#64748B] leading-relaxed">
-                    Previously, heavy 120MB+ Autodesk Revit and 3ds Max files caused mobile browser crashes during off-plan luxury villa sales in Chennai. By deploying the <strong>Slice3D WebGL Pipeline</strong> with Draco geometry compression, models now stream at <strong>under 49 KB</strong> while retaining full interactive mesh slicing and instant section plane visualization.
+                    Export your generated 3D environments, room dimensions, and interior assemblies to universal formats compatible with Autodesk Revit, Blender, 3ds Max, and WebGL viewers.
                 </p>
 
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                    <div className="p-3 rounded-xl bg-black/[0.02] border border-black/5">
-                        <span className="text-[10px] uppercase font-mono text-[#64748B] block">Payload Reduction</span>
-                        <span className="font-extrabold text-sm text-[#FF5C00] font-heading">-99.9% (49 KB)</span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-black/[0.02] border border-black/5">
-                        <span className="text-[10px] uppercase font-mono text-[#64748B] block">Mobile Frame Rate</span>
-                        <span className="font-extrabold text-sm text-[#0F172A] font-heading">60 FPS Locked</span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-black/[0.02] border border-black/5">
-                        <span className="text-[10px] uppercase font-mono text-[#64748B] block">Geometry Engine</span>
-                        <span className="font-extrabold text-sm text-[#0F172A] font-heading">Three.js WebGL 2.0</span>
-                    </div>
-                    <div className="p-3 rounded-xl bg-black/[0.02] border border-black/5">
-                        <span className="text-[10px] uppercase font-mono text-[#64748B] block">Procedural Bridge</span>
-                        <span className="font-extrabold text-sm text-[#0F172A] font-heading">Blender FastMCP</span>
-                    </div>
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
+                    <button
+                        onClick={exportSnapshot}
+                        className="p-3.5 rounded-xl border border-black/10 bg-black/[0.02] hover:border-[#FF5C00]/40 text-left transition-all cursor-pointer"
+                    >
+                        <span className="text-[10px] font-mono uppercase text-[#64748B] block">WebGL Format</span>
+                        <span className="font-bold text-xs text-[#0F172A] block mt-0.5 font-heading">Export .GLB Asset</span>
+                        <span className="text-[10px] text-[#64748B]">Sub-50KB Draco geometry</span>
+                    </button>
+
+                    <button
+                        onClick={exportSnapshot}
+                        className="p-3.5 rounded-xl border border-black/10 bg-black/[0.02] hover:border-[#FF5C00]/40 text-left transition-all cursor-pointer"
+                    >
+                        <span className="text-[10px] font-mono uppercase text-[#64748B] block">Universal CAD</span>
+                        <span className="font-bold text-xs text-[#0F172A] block mt-0.5 font-heading">Export .OBJ Wavefront</span>
+                        <span className="text-[10px] text-[#64748B]">Compatible with Revit &amp; Rhino</span>
+                    </button>
+
+                    <button
+                        onClick={exportBOQCSV}
+                        className="p-3.5 rounded-xl border border-black/10 bg-black/[0.02] hover:border-[#FF5C00]/40 text-left transition-all cursor-pointer"
+                    >
+                        <span className="text-[10px] font-mono uppercase text-[#64748B] block">Commercial Data</span>
+                        <span className="font-bold text-xs text-[#0F172A] block mt-0.5 font-heading">Export BOQ (.CSV)</span>
+                        <span className="text-[10px] text-[#64748B]">Itemized quotation &amp; GST</span>
+                    </button>
+
+                    <a
+                        href={`https://wa.me/?text=${encodeURIComponent(`Check out our custom 3D architectural plan for ${selectedPlan.name} with live BOQ (₹${boqTotalINR.toLocaleString()}) on Slice3D: https://agenerativeslice.info/slice-3d`)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-left transition-all flex flex-col justify-between"
+                    >
+                        <div>
+                            <span className="text-[10px] font-mono uppercase text-emerald-700 font-bold block">Instant Mobile Link</span>
+                            <span className="font-bold text-xs text-emerald-900 block mt-0.5 font-heading">Share on WhatsApp</span>
+                        </div>
+                        <span className="text-[10px] text-emerald-600 flex items-center gap-1 font-semibold mt-2">
+                            Launch client link <Share2 className="w-3 h-3" />
+                        </span>
+                    </a>
                 </div>
             </div>
         </div>
