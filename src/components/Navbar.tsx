@@ -55,30 +55,25 @@ export const Navbar = () => {
     return (
         <>
             {/* Top Fixed Header Bar */}
-            <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 pt-3 sm:pt-4 transition-all duration-200">
+            <header className="fixed top-0 left-0 right-0 z-50 px-3 sm:px-8 pt-2.5 sm:pt-4 transition-all duration-200">
                 <div className="max-w-6xl mx-auto flex items-center justify-between">
                     {/* Brand Identity / Home Link */}
                     <Link 
                         to="/" 
-                        className={`flex items-center gap-3 px-3.5 py-2 rounded-2xl border transition-all duration-200 ${
+                        className={`flex items-center gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-2xl border transition-all duration-200 ${
                             scrolled
                                 ? 'bg-white/95 border-black/10 shadow-md backdrop-blur-xl'
                                 : 'bg-white/80 border-black/5 backdrop-blur-md'
                         }`}
                     >
-                        <div className="w-8 h-8 rounded-xl overflow-hidden border border-black/10 shrink-0 shadow-sm">
+                        <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl overflow-hidden border border-black/10 shrink-0 shadow-sm">
                             <img src={logoImg} alt="A Generative Slice" className="w-full h-full object-cover" />
                         </div>
-                        <div className="flex flex-col">
-                            <div className="flex items-center gap-1.5">
-                                <span className="font-extrabold text-xs tracking-wider uppercase text-[#0F172A] font-heading">
-                                    A GENERATIVE SLICE
-                                </span>
-                                <span className="text-[#FF5C00] font-mono text-[10px] font-bold">.info</span>
-                            </div>
-                            <span className="text-[10px] text-[#64748B] tracking-tight hidden sm:block">
-                                Systems Sandbox &amp; Lab
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-[11px] sm:text-xs tracking-wider uppercase text-[#0F172A] font-heading">
+                                A GENERATIVE SLICE
                             </span>
+                            <span className="text-[#FF5C00] font-mono text-[10px] font-bold">.info</span>
                         </div>
                     </Link>
 
@@ -117,7 +112,7 @@ export const Navbar = () => {
                             href="https://agenerativeslice.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#FF5C00] bg-[#FF5C00]/10 hover:bg-[#FF5C00]/15 border border-[#FF5C00]/25 transition-all font-heading"
+                            className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-[#FF5C00] bg-[#FF5C00]/10 hover:bg-[#FF5C00]/15 border border-[#FF5C00]/25 transition-all font-heading min-h-[40px]"
                             title="Visit Corporate Headquarters"
                         >
                             <span>agenerativeslice.com</span>
@@ -157,14 +152,14 @@ export const Navbar = () => {
                             animate={{ y: 0 }}
                             exit={{ y: "100%" }}
                             transition={{ type: "spring", damping: 28, stiffness: 300 }}
-                            className="bg-white border-t border-black/10 rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto flex flex-col shadow-2xl"
+                            className="bg-white border-t border-black/10 rounded-t-3xl p-5 sm:p-6 max-h-[88vh] overflow-y-auto flex flex-col shadow-2xl pb-8"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {/* Drawer Drag Bar */}
-                            <div className="w-12 h-1.5 bg-black/10 rounded-full mx-auto mb-5" />
+                            <div className="w-12 h-1.5 bg-black/10 rounded-full mx-auto mb-4" />
 
                             {/* Drawer Header */}
-                            <div className="flex items-center justify-between pb-4 border-b border-black/5 mb-4">
+                            <div className="flex items-center justify-between pb-3 border-b border-black/5 mb-3">
                                 <div>
                                     <span className="text-[10px] font-mono uppercase tracking-widest text-[#FF5C00] font-bold block">
                                         | Navigation Menu
@@ -201,7 +196,7 @@ export const Navbar = () => {
                             </Link>
 
                             {/* 7 Workspaces List */}
-                            <div className="space-y-2 mb-6">
+                            <div className="space-y-1.5 mb-5">
                                 {detailedProducts.map((p) => {
                                     const active = location.pathname === p.path;
                                     return (
@@ -209,31 +204,31 @@ export const Navbar = () => {
                                             key={p.id}
                                             to={p.path}
                                             onClick={() => setMobileOpen(false)}
-                                            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all min-h-[50px] ${
+                                            className={`flex items-center justify-between p-3 rounded-2xl border transition-all min-h-[50px] ${
                                                 active
                                                     ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]'
                                                     : 'border-black/5 bg-black/[0.02] text-[#0F172A] hover:border-[#FF5C00]/30'
                                             }`}
                                         >
-                                            <div className="flex items-center gap-3">
-                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
                                                     active ? 'bg-[#FF5C00] text-white' : 'bg-black/5 text-[#FF5C00]'
                                                 }`}>
                                                     {getProductIcon(p.id, "w-4 h-4")}
                                                 </div>
-                                                <div>
-                                                    <span className="font-bold text-sm block font-heading">{p.name}</span>
-                                                    <span className="text-[11px] text-[#64748B]">{p.tagline}</span>
+                                                <div className="min-w-0">
+                                                    <span className="font-bold text-sm block font-heading truncate">{p.name}</span>
+                                                    <span className="text-[11px] text-[#64748B] block truncate">{p.tagline}</span>
                                                 </div>
                                             </div>
-                                            <ChevronRight className="w-4 h-4 text-[#64748B]" />
+                                            <ChevronRight className="w-4 h-4 text-[#64748B] shrink-0" />
                                         </Link>
                                     );
                                 })}
                             </div>
 
                             {/* External Links & Corporate Bridge */}
-                            <div className="pt-4 border-t border-black/5 space-y-2">
+                            <div className="pt-3 border-t border-black/5 space-y-2">
                                 <a
                                     href="https://agenerativeslice.com"
                                     target="_blank"

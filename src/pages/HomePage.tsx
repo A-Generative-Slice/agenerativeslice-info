@@ -86,29 +86,29 @@ export const HomePage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[82vh] flex flex-col justify-between pt-24 sm:pt-32 pb-16 px-4 sm:px-6 max-w-5xl mx-auto">
+        <div className="min-h-[82vh] flex flex-col justify-between pt-20 sm:pt-28 pb-14 px-3 sm:px-6 max-w-4xl mx-auto w-full">
             {/* HERO SECTION: Minimal, Modern Business Intro */}
-            <div className="space-y-8 sm:space-y-10 my-auto">
-                <div className="text-center space-y-4">
+            <div className="space-y-6 sm:space-y-8 my-auto w-full">
+                <div className="text-center space-y-3 px-2">
                     {/* Editorial Kicker */}
-                    <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-[#FF5C00] font-heading">
+                    <div className="inline-flex items-center gap-2 text-[11px] sm:text-xs font-bold uppercase tracking-widest text-[#FF5C00] font-heading">
                         <span className="font-mono text-[#FF5C00]">|</span>
-                        <span>A GENERATIVE SLICE • SYSTEMS LABORATORY</span>
+                        <span>A GENERATIVE SLICE • SYSTEMS LAB</span>
                     </div>
 
-                    <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight leading-[1.12] max-w-2xl mx-auto">
-                        Explore Proprietary <span className="text-[#FF5C00]">Software Systems</span>
+                    <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-[#0F172A] font-heading tracking-tight leading-tight max-w-2xl mx-auto">
+                        Proprietary Software Systems &amp; <span className="text-[#FF5C00]">Interactive Sandboxes</span>
                     </h1>
 
-                    <p className="text-xs sm:text-sm text-[#64748B] dark:text-[#94A3B8] max-w-xl mx-auto leading-relaxed">
-                        Search and launch dedicated interactive sandboxes, WebGL runtimes, and autonomous agent tools engineered in Chennai, India.
+                    <p className="text-xs sm:text-sm text-[#64748B] max-w-lg mx-auto leading-relaxed">
+                        Search and launch dedicated browser sandboxes, WebGL runtimes, and autonomous agent systems engineered in Chennai, India.
                     </p>
                 </div>
 
                 {/* SPOTLIGHT COMMAND SEARCH BAR */}
-                <div className="max-w-2xl mx-auto space-y-3">
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-[#64748B] dark:text-white/40 group-focus-within:text-[#FF5C00] transition-colors">
+                <div className="space-y-3 w-full">
+                    <div className="relative group w-full">
+                        <div className="absolute inset-y-0 left-3.5 sm:left-4 flex items-center pointer-events-none text-[#64748B] group-focus-within:text-[#FF5C00] transition-colors">
                             <Search className="w-5 h-5" />
                         </div>
 
@@ -120,25 +120,25 @@ export const HomePage: React.FC = () => {
                                 setSearchQuery(e.target.value);
                                 setActiveFilter('');
                             }}
-                            placeholder="Search products, technologies, or keywords (e.g. 3D WebGL, leads, email, CRM)..."
-                            className="w-full pl-12 pr-24 py-4 sm:py-4.5 rounded-2xl border-2 border-black/10 dark:border-white/10 bg-white/90 dark:bg-[#0c0f17]/90 text-[#0F172A] dark:text-white placeholder-[#64748B]/60 text-sm sm:text-base font-medium shadow-xl backdrop-blur-xl focus:border-[#FF5C00] focus:ring-4 focus:ring-[#FF5C00]/10 outline-none transition-all"
+                            placeholder="Search 7 enterprise systems (3D, leads, email, CRM, PPT, vault, LMS)..."
+                            className="w-full pl-11 sm:pl-12 pr-12 py-3.5 sm:py-4 rounded-2xl border-2 border-black/10 bg-white text-[#0F172A] placeholder-[#64748B]/60 text-sm sm:text-base font-medium shadow-md focus:border-[#FF5C00] focus:ring-4 focus:ring-[#FF5C00]/10 outline-none transition-all min-h-[50px] sm:min-h-[56px]"
                             autoComplete="off"
                             spellCheck={false}
                         />
 
                         {/* Right Shortcuts / Clear Button */}
-                        <div className="absolute inset-y-0 right-3.5 flex items-center gap-1.5">
+                        <div className="absolute inset-y-0 right-3 flex items-center gap-1.5">
                             {searchQuery ? (
                                 <button
                                     onClick={handleClearSearch}
-                                    className="p-1.5 rounded-lg text-[#64748B] dark:text-white/50 hover:text-[#0F172A] dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 transition-colors cursor-pointer"
+                                    className="p-1.5 rounded-lg text-[#64748B] hover:text-[#0F172A] hover:bg-black/5 transition-colors cursor-pointer"
                                     title="Clear search"
                                     aria-label="Clear search input"
                                 >
                                     <X className="w-4 h-4" />
                                 </button>
                             ) : (
-                                <div className="hidden sm:flex items-center gap-1 px-2 py-1 rounded-md border border-black/10 dark:border-white/10 bg-black/[0.03] dark:bg-white/[0.04] text-[10px] font-mono text-[#64748B] dark:text-white/40">
+                                <div className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-md border border-black/10 bg-black/[0.03] text-[10px] font-mono text-[#64748B]">
                                     <Command className="w-3 h-3" />
                                     <span>K</span>
                                 </div>
@@ -146,18 +146,18 @@ export const HomePage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Quick Category Chips */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 touch-scroll no-scrollbar">
+                    {/* Quick Category Chips: Edge-to-Edge Touch Scroll on Mobile */}
+                    <div className="-mx-3 px-3 sm:mx-0 sm:px-0 flex items-center gap-1.5 overflow-x-auto pb-1 touch-scroll no-scrollbar">
                         {QUICK_FILTERS.map((filter) => {
                             const isSelected = activeFilter === filter.label || (filter.query === '' && searchQuery === '');
                             return (
                                 <button
                                     key={filter.label}
                                     onClick={() => handleSelectFilter(filter.label, filter.query)}
-                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer ${
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer min-h-[38px] flex items-center ${
                                         isSelected
                                             ? 'bg-[#FF5C00] text-white shadow-sm'
-                                            : 'bg-white/80 dark:bg-[#0c0f17]/80 border border-black/5 dark:border-white/10 text-[#64748B] dark:text-white/70 hover:border-[#FF5C00]/40'
+                                            : 'bg-white border border-black/10 text-[#64748B] hover:border-[#FF5C00]/40'
                                     }`}
                                 >
                                     {filter.label}
@@ -168,12 +168,12 @@ export const HomePage: React.FC = () => {
                 </div>
 
                 {/* LIVE SEARCH RESULTS & PRODUCT DIRECTORY */}
-                <div className="max-w-3xl mx-auto space-y-3">
-                    <div className="flex items-center justify-between text-xs font-mono text-[#64748B] dark:text-white/40 px-1">
+                <div className="space-y-3 w-full">
+                    <div className="flex items-center justify-between text-xs font-mono text-[#64748B] px-1">
                         <span>
                             {filteredProducts.length} {filteredProducts.length === 1 ? 'Product Sandbox' : 'Product Sandboxes'}
                         </span>
-                        <span>Click to launch full experience in new tab</span>
+                        <span className="hidden sm:inline">Opens full experience in new tab</span>
                     </div>
 
                     {filteredProducts.length > 0 ? (
@@ -181,56 +181,56 @@ export const HomePage: React.FC = () => {
                             {filteredProducts.map((product) => (
                                 <div
                                     key={product.id}
-                                    className="p-4 sm:p-5 rounded-2xl border border-black/10 dark:border-white/10 bg-white/90 dark:bg-[#0c0f17]/90 shadow-sm hover:border-[#FF5C00]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
+                                    className="p-4 sm:p-5 rounded-2xl border border-black/10 bg-white shadow-sm hover:border-[#FF5C00]/50 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
                                 >
                                     {/* Left: Icon & Meta */}
                                     <div className="flex items-start sm:items-center gap-3.5 flex-1 min-w-0">
-                                        <div className="w-11 h-11 rounded-xl bg-[#FF5C00] flex items-center justify-center shadow-sm shrink-0">
+                                        <div className="w-11 h-11 rounded-xl bg-[#FF5C00] flex items-center justify-center shadow-sm shrink-0 mt-0.5 sm:mt-0">
                                             {getProductIcon(product.id)}
                                         </div>
 
                                         <div className="space-y-1 min-w-0 flex-1">
                                             <div className="flex items-center gap-2 flex-wrap">
-                                                <h3 className="font-extrabold text-base text-[#0F172A] dark:text-white font-heading">
+                                                <h3 className="font-extrabold text-base text-[#0F172A] font-heading">
                                                     {product.name}
                                                 </h3>
                                                 <span className="text-[10px] font-mono uppercase tracking-wider text-[#FF5C00] font-bold">
                                                     | {product.category}
                                                 </span>
-                                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/5 dark:bg-white/10 text-[#64748B] dark:text-white/60">
+                                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-black/5 text-[#64748B]">
                                                     {product.badge}
                                                 </span>
                                             </div>
 
-                                            <p className="text-xs text-[#64748B] dark:text-[#94A3B8] line-clamp-1">
+                                            <p className="text-xs text-[#64748B] line-clamp-1 leading-relaxed">
                                                 {product.tagline}
                                             </p>
 
-                                            <div className="text-[11px] font-mono text-[#64748B] dark:text-white/40 flex items-center gap-2 pt-0.5">
+                                            <div className="text-[11px] font-mono text-[#64748B] flex items-center gap-2 pt-0.5">
                                                 <span className="text-[#FF5C00] font-medium">{product.specs[0]?.label}: {product.specs[0]?.value}</span>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Right: Actions */}
-                                    <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                                    {/* Right: Actions (Mobile Responsive 44px+ touch area) */}
+                                    <div className="flex items-center gap-2 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-black/5 shrink-0">
                                         <a
                                             href={`https://github.com/A-Generative-Slice/${product.repoName}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="px-3 py-2 rounded-xl border border-black/10 dark:border-white/10 bg-black/[0.02] dark:bg-white/[0.02] text-xs font-mono text-[#64748B] dark:text-white/60 hover:text-[#FF5C00] hover:border-[#FF5C00]/30 transition-all flex items-center gap-1.5 min-h-[42px]"
+                                            className="hidden md:inline-flex px-3 py-2 rounded-xl border border-black/10 bg-black/[0.02] text-xs font-mono text-[#64748B] hover:text-[#FF5C00] hover:border-[#FF5C00]/30 transition-all items-center gap-1.5 min-h-[44px]"
                                             title="View GitHub Repository"
                                         >
                                             <GitBranch className="w-3.5 h-3.5 text-[#FF5C00]" />
-                                            <span className="hidden md:inline">{product.repoName}</span>
+                                            <span>{product.repoName}</span>
                                         </a>
 
-                                        {/* Open in New Tab for full product experience with trial & templates */}
+                                        {/* Primary Launch Action in New Tab */}
                                         <a
                                             href={product.path}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm font-heading min-h-[42px]"
+                                            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm font-heading min-h-[46px]"
                                             title={`Open ${product.name} interactive sandbox in new tab`}
                                         >
                                             <span>Launch Full Experience</span>
@@ -241,17 +241,17 @@ export const HomePage: React.FC = () => {
                             ))}
                         </div>
                     ) : (
-                        <div className="text-center py-12 px-6 rounded-2xl border border-dashed border-black/10 dark:border-white/10 bg-black/[0.01] dark:bg-white/[0.01] space-y-3">
+                        <div className="text-center py-12 px-6 rounded-2xl border border-dashed border-black/10 bg-black/[0.01] space-y-3">
                             <Sparkles className="w-8 h-8 text-[#FF5C00] mx-auto opacity-60" />
-                            <h4 className="font-bold text-sm text-[#0F172A] dark:text-white font-heading">
+                            <h4 className="font-bold text-sm text-[#0F172A] font-heading">
                                 No software sandboxes found matching "{searchQuery}"
                             </h4>
-                            <p className="text-xs text-[#64748B] dark:text-white/50 max-w-sm mx-auto">
+                            <p className="text-xs text-[#64748B] max-w-sm mx-auto">
                                 Try searching for "3D", "leads", "email", "CRM", "slides", "vault", or "LMS".
                             </p>
                             <button
                                 onClick={handleClearSearch}
-                                className="px-4 py-2 rounded-xl bg-[#FF5C00] text-white text-xs font-bold hover:bg-[#FF8C1A] transition-all cursor-pointer"
+                                className="px-4 py-2.5 rounded-xl bg-[#FF5C00] text-white text-xs font-bold hover:bg-[#FF8C1A] transition-all cursor-pointer min-h-[42px]"
                             >
                                 Reset Search Filter
                             </button>
@@ -261,9 +261,9 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* MINIMAL FOOTER BRIDGE: Single Clean Line */}
-            <div className="pt-8 border-t border-black/5 dark:border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B] dark:text-white/40">
+            <div className="pt-8 border-t border-black/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#64748B] w-full">
                 <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[#0F172A] dark:text-white">A Generative Slice</span>
+                    <span className="font-semibold text-[#0F172A]">A Generative Slice</span>
                     <span>•</span>
                     <span>Corporate Studio at</span>
                     <a

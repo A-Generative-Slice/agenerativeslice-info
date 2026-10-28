@@ -42,8 +42,10 @@ body {
   font-family: 'Poppins', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  @apply bg-[#fafafa] dark:bg-[#0a0a0a] text-[#0f172a] dark:text-white;
+  background-color: #fafafa;
+  color: #0f172a;
   overflow-x: hidden;
+  width: 100%;
 }
 
 /* === Glass Cards === */
