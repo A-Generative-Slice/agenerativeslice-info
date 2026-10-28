@@ -2,181 +2,111 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { 
-    Scan, Upload, Box, 
-    Download, Plus, Trash2, 
-    CheckCircle2, Sparkles, 
-    Camera, Play, Pause, Activity, ChevronRight, 
-    Building, Sofa, Share2, Scissors, Sun
+    Send, Paperclip, Image as ImageIcon, Bot, User, Sparkles, 
+    Trash2, Box, Scissors, Camera, 
+    Share2, CheckCircle2, FolderPlus,
+    X
 } from 'lucide-react';
+import logoImg from '../../assets/logo.jpg';
 import { RepoSyncBar } from '../RepoSyncBar';
 
-export type ViewportMode = 'pbr' | 'wireframe' | 'normals' | 'clay';
-export type LightingPreset = 'studio' | 'sunset' | 'cyberpunk' | 'cad';
-export type SliceAxis = 'x' | 'y' | 'z';
-export type ActiveWorkflowTab = 'scan' | 'walkthrough' | 'furnish' | 'export';
+export type ViewportMode = 'pbr' | 'clay' | 'wireframe';
+export type ActiveView = 'studio' | 'vault' | 'boq';
 
-// Sample Floor Plans for Instant 2D -> 3D Reconstruction
-interface SampleFloorPlan {
+// Custom / Stored 3D Asset Definition
+export interface StoredAsset {
     id: string;
     name: string;
-    tag: string;
-    area: string;
-    dims: string;
-    desc: string;
-    glbFile: string;
-    walls: { x: number; z: number; w: number; d: number; h: number }[];
-    previewSvgPath: string;
-}
-
-const SAMPLE_PLANS: SampleFloorPlan[] = [
-    {
-        id: 'villa_2bhk',
-        name: 'Metropolis Luxury 2BHK Villa',
-        tag: 'RESIDENTIAL',
-        area: '1,420 sq.ft',
-        dims: '14.2m × 10.8m',
-        desc: 'Master suite, guest bedroom, open-concept living hall, and semi-open modular kitchen.',
-        glbFile: '/models/3d_floor_plan_2.glb',
-        previewSvgPath: 'M10 10 H90 V90 H10 Z M10 50 H90 M50 10 V90 M30 50 V90',
-        walls: [
-            { x: 0, z: -4, w: 10, d: 0.3, h: 2.8 },
-            { x: 0, z: 4, w: 10, d: 0.3, h: 2.8 },
-            { x: -5, z: 0, w: 0.3, d: 8, h: 2.8 },
-            { x: 5, z: 0, w: 0.3, d: 8, h: 2.8 },
-            { x: 0, z: 0, w: 0.3, d: 8, h: 2.8 },
-            { x: -2.5, z: 0, w: 5, d: 0.3, h: 2.8 }
-        ]
-    },
-    {
-        id: 'studio_loft',
-        name: 'Urban Minimalist Studio Loft',
-        tag: 'COMMERCIAL / PWA',
-        area: '680 sq.ft',
-        dims: '8.5m × 7.2m',
-        desc: 'Open-plan workspace, alcove bedroom zone, partition wall, and private restroom.',
-        glbFile: '/models/3d_floor_plan.glb',
-        previewSvgPath: 'M15 15 H85 V85 H15 Z M15 45 H55 M55 15 V45',
-        walls: [
-            { x: 0, z: -3, w: 7, d: 0.3, h: 2.6 },
-            { x: 0, z: 3, w: 7, d: 0.3, h: 2.6 },
-            { x: -3.5, z: 0, w: 0.3, d: 6, h: 2.6 },
-            { x: 3.5, z: 0, w: 0.3, d: 6, h: 2.6 },
-            { x: -1, z: 1, w: 3, d: 0.3, h: 2.6 }
-        ]
-    },
-    {
-        id: 'penthouse_3bhk',
-        name: 'Grand Horizon 3BHK Penthouse',
-        tag: 'HIGH-TICKET',
-        area: '2,850 sq.ft',
-        dims: '21.0m × 16.5m',
-        desc: 'Wrap-around balcony, 3 ensuite bedrooms, formal foyer, and expanded dining hall.',
-        glbFile: '/models/3d_floor_plan_2.glb',
-        previewSvgPath: 'M5 5 H95 V95 H5 Z M5 35 H95 M5 65 H65 M65 5 V95',
-        walls: [
-            { x: 0, z: -5, w: 14, d: 0.35, h: 3.0 },
-            { x: 0, z: 5, w: 14, d: 0.35, h: 3.0 },
-            { x: -7, z: 0, w: 0.35, d: 10, h: 3.0 },
-            { x: 7, z: 0, w: 0.35, d: 10, h: 3.0 },
-            { x: 2, z: 0, w: 0.35, d: 10, h: 3.0 },
-            { x: -3, z: 2, w: 6, d: 0.35, h: 3.0 }
-        ]
-    }
-];
-
-// Modular Furniture Catalog Item
-export interface FurnitureItem {
-    id: string;
-    name: string;
-    category: 'Bedroom' | 'Living' | 'Dining' | 'Office' | 'Lighting' | 'Kitchen';
+    category: string;
     priceINR: number;
-    priceUSD: number;
     dimensions: string;
-    spec: string;
+    fileName: string;
+    fileSizeKB: number;
     color: string;
-    geometryType: 'bed' | 'sofa' | 'table' | 'desk' | 'light' | 'kitchen';
+    isCustom?: boolean;
 }
 
-const FURNITURE_CATALOG: FurnitureItem[] = [
+// Initial Default Asset Vault Items
+const DEFAULT_ASSETS: StoredAsset[] = [
     {
-        id: 'furn_bed',
-        name: 'Executive Teak King Bed & Headboard',
+        id: 'asset_bed_teak',
+        name: 'Executive Teak King Bed',
         category: 'Bedroom',
         priceINR: 48000,
-        priceUSD: 580,
-        dimensions: '2.0m × 1.8m × 1.1m',
-        spec: 'Solid Grade-A Teak Wood, upholstered linen backboard, hydraulic underbed storage.',
-        color: '#854D0E',
-        geometryType: 'bed'
+        dimensions: '2.0m × 1.8m',
+        fileName: 'teak_king_bed.glb',
+        fileSizeKB: 38,
+        color: '#854D0E'
     },
     {
-        id: 'furn_sofa',
-        name: 'Scandinavian 3-Seater Fluted Sofa',
+        id: 'asset_sofa_fluted',
+        name: 'Fluted Velvet 3-Seater Sofa',
         category: 'Living',
         priceINR: 36000,
-        priceUSD: 430,
-        dimensions: '2.2m × 0.9m × 0.75m',
-        spec: 'High-density foam, hydrophobic velvet fabric, brushed brass architectural feet.',
-        color: '#FF5C00',
-        geometryType: 'sofa'
+        dimensions: '2.2m × 0.9m',
+        fileName: 'fluted_sofa.glb',
+        fileSizeKB: 42,
+        color: '#FF5C00'
     },
     {
-        id: 'furn_dining',
-        name: 'Minimalist 6-Seat Oak Dining Suite',
+        id: 'asset_dining_oak',
+        name: 'Minimalist White Oak Dining Table',
         category: 'Dining',
         priceINR: 28500,
-        priceUSD: 345,
-        dimensions: '1.8m × 0.9m × 0.76m',
-        spec: 'Natural American White Oak, matte polyurethane seal, chamfered edge profile.',
-        color: '#D97706',
-        geometryType: 'table'
+        dimensions: '1.8m × 0.9m',
+        fileName: 'white_oak_table.glb',
+        fileSizeKB: 29,
+        color: '#D97706'
     },
     {
-        id: 'furn_desk',
-        name: 'Ergonomic Executive Dual-Monitor Workstation',
+        id: 'asset_workstation',
+        name: 'Dual-Screen Ergonomic Desk',
         category: 'Office',
         priceINR: 22000,
-        priceUSD: 265,
-        dimensions: '1.5m × 0.75m × 0.74m',
-        spec: 'Matte black steel chassis, integrated cable tray, acoustic modesty panel.',
-        color: '#1E293B',
-        geometryType: 'desk'
+        dimensions: '1.5m × 0.75m',
+        fileName: 'executive_desk.glb',
+        fileSizeKB: 34,
+        color: '#1E293B'
     },
     {
-        id: 'furn_light',
-        name: 'Architectural Recessed Luminaire Set (8 Pcs)',
+        id: 'asset_luminaire',
+        name: 'Recessed 3000K Architectural Lights',
         category: 'Lighting',
         priceINR: 14500,
-        priceUSD: 175,
-        dimensions: '90mm cut-out, 3000K warm white',
-        spec: 'CRI 95+ anti-glare reflector optics, flicker-free dimmable driver module.',
-        color: '#F59E0B',
-        geometryType: 'light'
-    },
-    {
-        id: 'furn_kitchen',
-        name: 'Designer Quartz Modular Island & Cooktop',
-        category: 'Kitchen',
-        priceINR: 65000,
-        priceUSD: 780,
-        dimensions: '2.4m × 1.0m × 0.9m',
-        spec: 'Calacatta engineered quartz countertop, soft-close Blum hardware, breakfast bar.',
-        color: '#64748B',
-        geometryType: 'kitchen'
+        dimensions: '90mm diameter',
+        fileName: 'luminaire_pack.glb',
+        fileSizeKB: 18,
+        color: '#F59E0B'
     }
 ];
 
+// Placed 3D Object in the scene
 interface PlacedObject {
     instanceId: string;
-    item: FurnitureItem;
+    asset: StoredAsset;
     position: [number, number, number];
 }
 
+// Chat Message Interface
+interface ChatMessage {
+    id: string;
+    sender: 'user' | 'assistant';
+    text: string;
+    timestamp: string;
+    attachedImage?: string;
+    actionBadge?: string;
+}
+
 export const Slice3DShowcase: React.FC = () => {
-    // Container Refs
+    // Top-level View: Studio (Canvas + Chat), Vault (Product Adding), BOQ
+    const [currentView, setCurrentView] = useState<ActiveView>('studio');
+
+    // Canvas container ref
     const containerRef = useRef<HTMLDivElement | null>(null);
     const canvasContainerRef = useRef<HTMLDivElement | null>(null);
-    const planImageInputRef = useRef<HTMLInputElement | null>(null);
+    const chatEndRef = useRef<HTMLDivElement | null>(null);
+    const floorPlanFileInputRef = useRef<HTMLInputElement | null>(null);
+    const customAssetFileInputRef = useRef<HTMLInputElement | null>(null);
 
     // Three.js internal object refs
     const threeRefs = useRef<{
@@ -188,143 +118,159 @@ export const Slice3DShowcase: React.FC = () => {
         furnitureGroup: THREE.Group;
         clippingPlane: THREE.Plane;
         clippingPlaneHelper: THREE.PlaneHelper | null;
-        ambientLight: THREE.AmbientLight;
-        directionalLight: THREE.DirectionalLight;
-        rimLight: THREE.PointLight;
-        groundGrid: THREE.GridHelper;
         animFrameId: number;
     } | null>(null);
 
-    // Navigation / Active Workflow State
-    const [activeTab, setActiveTab] = useState<ActiveWorkflowTab>('walkthrough');
-    const [selectedPlan, setSelectedPlan] = useState<SampleFloorPlan>(SAMPLE_PLANS[0]);
-    
-    // AI Scanning Animation State
-    const [isScanning, setIsScanning] = useState<boolean>(false);
-    const [scanProgress, setScanProgress] = useState<number>(0);
-    const [scanMessage, setScanMessage] = useState<string>('Ready to scan');
+    // Viewport Mode & Slicing State
+    const [viewportMode, setViewportMode] = useState<ViewportMode>('pbr');
+    const [sliceEnabled, setSliceEnabled] = useState<boolean>(false);
+    const [sliceHeight, setSliceHeight] = useState<number>(1.8); // 0 to 3.5m
+    const [fps, setFps] = useState<number>(60);
+    const [polyCount, setPolyCount] = useState<number>(1840);
 
-    // Placed Furniture & Live BOQ State
-    const [placedItems, setPlacedItems] = useState<PlacedObject[]>([
+    // Asset Vault (Stored Products) - LocalStorage backed
+    const [assetVault, setAssetVault] = useState<StoredAsset[]>(() => {
+        try {
+            const saved = localStorage.getItem('slice3d_asset_vault');
+            return saved ? JSON.parse(saved) : DEFAULT_ASSETS;
+        } catch {
+            return DEFAULT_ASSETS;
+        }
+    });
+
+    // New Asset Modal / Upload State
+    const [newAssetName, setNewAssetName] = useState('');
+    const [newAssetCategory, setNewAssetCategory] = useState('Living');
+    const [newAssetPrice, setNewAssetPrice] = useState('32000');
+    const [newAssetFile, setNewAssetFile] = useState<File | null>(null);
+    const [isAddingAsset, setIsAddingAsset] = useState(false);
+
+    // Placed 3D Objects in Current Floor
+    const [placedObjects, setPlacedObjects] = useState<PlacedObject[]>([
         {
-            instanceId: 'default_1',
-            item: FURNITURE_CATALOG[0], // King bed
-            position: [-2.5, 0.4, -1.5]
+            instanceId: 'inst_1',
+            asset: DEFAULT_ASSETS[0],
+            position: [-2.4, 0.4, -1.8]
         },
         {
-            instanceId: 'default_2',
-            item: FURNITURE_CATALOG[1], // Sofa
-            position: [2.0, 0.35, 1.2]
+            instanceId: 'inst_2',
+            asset: DEFAULT_ASSETS[1],
+            position: [2.2, 0.35, 1.2]
         },
         {
-            instanceId: 'default_3',
-            item: FURNITURE_CATALOG[4], // Luminaire pack
+            instanceId: 'inst_3',
+            asset: DEFAULT_ASSETS[4],
             position: [0, 2.7, 0]
         }
     ]);
 
-    // Viewport & Lighting State
-    const [viewportMode, setViewportMode] = useState<ViewportMode>('pbr');
-    const [lightingPreset, setLightingPreset] = useState<LightingPreset>('studio');
-    const [isAutoSpin, setIsAutoSpin] = useState<boolean>(false);
-
-    // The Signature "Slice" Engine State
-    const [sliceEnabled, setSliceEnabled] = useState<boolean>(false);
-    const [sliceAxis, setSliceAxis] = useState<SliceAxis>('y');
-    const [slicePosition, setSlicePosition] = useState<number>(20);
-    const [sliceInvert, setSliceInvert] = useState<boolean>(false);
-
-    // Telemetry Diagnostics
-    const [fps, setFps] = useState<number>(60);
-    const [polyCount, setPolyCount] = useState<{ triangles: number; vertices: number }>({
-        triangles: 1420,
-        vertices: 2180
+    // Active Room Floor Plan Dimensions (Extruded procedurally)
+    const [roomDims, setRoomDims] = useState<{ name: string; w: number; d: number; h: number }>({
+        name: 'Modern 2BHK Spatial Plan',
+        w: 12,
+        d: 10,
+        h: 2.8
     });
 
-    // -------------------------------------------------------------
-    // Procedural 3D Furniture Geometry Builder
-    // -------------------------------------------------------------
-    const createFurnitureMesh = (item: FurnitureItem): THREE.Group => {
-        const group = new THREE.Group();
-        group.name = `Furniture_${item.id}`;
+    // Chat Environment State
+    const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
+        {
+            id: 'msg_1',
+            sender: 'assistant',
+            text: 'Welcome to Slice3D! I can construct 3D environments from 2D floor plan images, stage custom assets from your vault, and calculate live Bill of Quantities. How would you like to build your space?',
+            timestamp: 'Just now'
+        }
+    ]);
+    const [promptInput, setPromptInput] = useState('');
+    const [attachedFloorImage, setAttachedFloorImage] = useState<string | null>(null);
+    const [isAiProcessing, setIsAiProcessing] = useState(false);
 
-        const material = new THREE.MeshStandardMaterial({
-            color: new THREE.Color(item.color),
-            roughness: 0.4,
-            metalness: 0.2
+    // Save Asset Vault to localStorage
+    useEffect(() => {
+        try {
+            localStorage.setItem('slice3d_asset_vault', JSON.stringify(assetVault));
+        } catch {}
+    }, [assetVault]);
+
+    // Auto-scroll chat to bottom
+    useEffect(() => {
+        chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [chatMessages]);
+
+    // -------------------------------------------------------------
+    // Procedural Furniture Mesh Generator
+    // -------------------------------------------------------------
+    const createFurnitureMesh = (asset: StoredAsset): THREE.Group => {
+        const group = new THREE.Group();
+        group.name = `Placed_${asset.id}`;
+
+        const mat = new THREE.MeshStandardMaterial({
+            color: new THREE.Color(asset.color),
+            roughness: 0.35,
+            metalness: 0.15
         });
 
-        if (item.geometryType === 'bed') {
-            const baseGeom = new THREE.BoxGeometry(2.0, 0.4, 1.8);
-            const baseMesh = new THREE.Mesh(baseGeom, material);
-            baseMesh.castShadow = true;
-            group.add(baseMesh);
+        if (asset.category.toLowerCase().includes('bed')) {
+            const base = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.4, 1.8), mat);
+            base.castShadow = true;
+            group.add(base);
 
-            const headGeom = new THREE.BoxGeometry(0.2, 1.1, 1.8);
-            const headMat = new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 });
-            const headMesh = new THREE.Mesh(headGeom, headMat);
-            headMesh.position.set(-1.0, 0.35, 0);
-            headMesh.castShadow = true;
-            group.add(headMesh);
-        } else if (item.geometryType === 'sofa') {
-            const seatGeom = new THREE.BoxGeometry(2.2, 0.35, 0.9);
-            const seatMesh = new THREE.Mesh(seatGeom, material);
-            seatMesh.castShadow = true;
-            group.add(seatMesh);
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.1, 1.8), new THREE.MeshStandardMaterial({ color: 0x334155, roughness: 0.6 }));
+            head.position.set(-1.0, 0.35, 0);
+            head.castShadow = true;
+            group.add(head);
+        } else if (asset.category.toLowerCase().includes('sofa') || asset.category.toLowerCase().includes('living')) {
+            const seat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.35, 0.9), mat);
+            seat.castShadow = true;
+            group.add(seat);
 
-            const backGeom = new THREE.BoxGeometry(2.2, 0.5, 0.25);
-            const backMesh = new THREE.Mesh(backGeom, material);
-            backMesh.position.set(0, 0.35, -0.35);
-            group.add(backMesh);
-        } else if (item.geometryType === 'table') {
-            const topGeom = new THREE.BoxGeometry(1.8, 0.08, 0.9);
-            const topMesh = new THREE.Mesh(topGeom, material);
-            topMesh.position.y = 0.35;
-            group.add(topMesh);
+            const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 0.25), mat);
+            back.position.set(0, 0.35, -0.35);
+            group.add(back);
+        } else if (asset.category.toLowerCase().includes('dining') || asset.category.toLowerCase().includes('table')) {
+            const top = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.08, 0.9), mat);
+            top.position.y = 0.35;
+            group.add(top);
 
-            const legGeom = new THREE.CylinderGeometry(0.04, 0.04, 0.7);
-            const legMat = new THREE.MeshStandardMaterial({ color: 0x0F172A, roughness: 0.3 });
-            const legOffsets = [[-0.8, -0.35], [0.8, -0.35], [-0.8, 0.35], [0.8, 0.35]];
-            legOffsets.forEach(([lx, lz]) => {
-                const leg = new THREE.Mesh(legGeom, legMat);
+            const legMat = new THREE.MeshStandardMaterial({ color: 0x0F172A });
+            [[-0.8, -0.35], [0.8, -0.35], [-0.8, 0.35], [0.8, 0.35]].forEach(([lx, lz]) => {
+                const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.7), legMat);
                 leg.position.set(lx, 0, lz);
                 group.add(leg);
             });
-        } else if (item.geometryType === 'light') {
-            const pendantGeom = new THREE.ConeGeometry(0.3, 0.4, 16);
-            const pendantMat = new THREE.MeshStandardMaterial({
+        } else if (asset.category.toLowerCase().includes('light')) {
+            const pendant = new THREE.Mesh(new THREE.ConeGeometry(0.25, 0.35, 16), new THREE.MeshStandardMaterial({
                 color: 0xF59E0B,
                 emissive: 0xFF5C00,
                 emissiveIntensity: 0.8
-            });
-            const pendant = new THREE.Mesh(pendantGeom, pendantMat);
+            }));
             pendant.rotation.x = Math.PI;
             group.add(pendant);
         } else {
-            const boxGeom = new THREE.BoxGeometry(1.4, 0.8, 0.8);
-            const boxMesh = new THREE.Mesh(boxGeom, material);
-            boxMesh.castShadow = true;
-            group.add(boxMesh);
+            const box = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.75, 0.75), mat);
+            box.castShadow = true;
+            group.add(box);
         }
 
         return group;
     };
 
     // -------------------------------------------------------------
-    // Build 3D Architectural Room Extrusion from Plan
+    // Rebuild Room & Placed Objects
     // -------------------------------------------------------------
-    const buildRoomGeometry = useCallback((plan: SampleFloorPlan) => {
+    const buildRoom = useCallback(() => {
         const three = threeRefs.current;
         if (!three) return;
 
+        // Clear room group
         while (three.roomGroup.children.length > 0) {
             three.roomGroup.remove(three.roomGroup.children[0]);
         }
 
         // 1. Floor Slab
-        const floorGeom = new THREE.BoxGeometry(14, 0.15, 12);
+        const floorGeom = new THREE.BoxGeometry(roomDims.w, 0.15, roomDims.d);
         const floorMat = new THREE.MeshStandardMaterial({
-            color: 0xF1F5F9,
+            color: 0xF8FAFC,
             roughness: 0.2,
             metalness: 0.05
         });
@@ -333,78 +279,69 @@ export const Slice3DShowcase: React.FC = () => {
         floorMesh.receiveShadow = true;
         three.roomGroup.add(floorMesh);
 
-        // 2. Extrude Walls
+        // 2. Extruded Outer Walls
         const wallMat = new THREE.MeshStandardMaterial({
             color: 0xE2E8F0,
-            roughness: 0.8,
+            roughness: 0.85,
             metalness: 0.05
         });
 
-        plan.walls.forEach((w) => {
-            const wallGeom = new THREE.BoxGeometry(w.w, w.h, w.d);
-            const wallMesh = new THREE.Mesh(wallGeom, wallMat);
-            wallMesh.position.set(w.x, w.h / 2, w.z);
-            wallMesh.castShadow = true;
-            wallMesh.receiveShadow = true;
-            three.roomGroup.add(wallMesh);
+        const halfW = roomDims.w / 2;
+        const halfD = roomDims.d / 2;
+        const wallH = roomDims.h;
+        const wallT = 0.28;
+
+        const wallConfigs = [
+            // North wall
+            { pos: [0, wallH / 2, -halfD], size: [roomDims.w, wallH, wallT] },
+            // South wall
+            { pos: [0, wallH / 2, halfD], size: [roomDims.w, wallH, wallT] },
+            // West wall
+            { pos: [-halfW, wallH / 2, 0], size: [wallT, wallH, roomDims.d] },
+            // East wall
+            { pos: [halfW, wallH / 2, 0], size: [wallT, wallH, roomDims.d] },
+            // Interior partition
+            { pos: [0, wallH / 2, 0], size: [wallT, wallH, roomDims.d * 0.6] }
+        ];
+
+        wallConfigs.forEach(w => {
+            const mesh = new THREE.Mesh(
+                new THREE.BoxGeometry(w.size[0], w.size[1], w.size[2]),
+                wallMat
+            );
+            mesh.position.set(w.pos[0], w.pos[1], w.pos[2]);
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            three.roomGroup.add(mesh);
         });
 
-        // 3. Render Placed Furniture
+        // 3. Render Placed Objects from Vault
         while (three.furnitureGroup.children.length > 0) {
             three.furnitureGroup.remove(three.furnitureGroup.children[0]);
         }
 
-        placedItems.forEach((p) => {
-            const fMesh = createFurnitureMesh(p.item);
-            fMesh.position.set(p.position[0], p.position[1], p.position[2]);
-            three.furnitureGroup.add(fMesh);
+        placedObjects.forEach(p => {
+            const mesh = createFurnitureMesh(p.asset);
+            mesh.position.set(p.position[0], p.position[1], p.position[2]);
+            three.furnitureGroup.add(mesh);
         });
 
-        setPolyCount({
-            triangles: plan.walls.length * 12 + placedItems.length * 48 + 24,
-            vertices: plan.walls.length * 24 + placedItems.length * 80 + 48
-        });
-    }, [placedItems]);
+        setPolyCount(wallConfigs.length * 12 + placedObjects.length * 52 + 24);
+    }, [roomDims, placedObjects]);
 
-    // Trigger AI Floor Plan Scan & 3D Reconstruction
-    const runFloorPlanScan = (plan: SampleFloorPlan) => {
-        setSelectedPlan(plan);
-        setIsScanning(true);
-        setScanProgress(15);
-        setScanMessage('Detecting perimeter walls & room boundaries...');
-
-        setTimeout(() => {
-            setScanProgress(45);
-            setScanMessage('Vectorizing door swings & spatial dimensions...');
-        }, 400);
-
-        setTimeout(() => {
-            setScanProgress(80);
-            setScanMessage('Extruding 3D geometry & generating Draco mesh...');
-        }, 850);
-
-        setTimeout(() => {
-            setScanProgress(100);
-            setScanMessage('Reconstruction complete! Loading interactive 3D studio...');
-            setIsScanning(false);
-            buildRoomGeometry(plan);
-            setActiveTab('walkthrough');
-        }, 1200);
-    };
-
-    // Initialize Three.js Engine
+    // -------------------------------------------------------------
+    // Initialize Three.js WebGL Engine
+    // -------------------------------------------------------------
     useEffect(() => {
         const container = canvasContainerRef.current;
         if (!container) return;
 
         const width = container.clientWidth;
-        const height = container.clientHeight || 520;
+        const height = container.clientHeight || 500;
 
         const scene = new THREE.Scene();
-        scene.background = null;
-
         const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-        camera.position.set(8, 7, 10);
+        camera.position.set(9, 8, 11);
 
         const renderer = new THREE.WebGLRenderer({
             antialias: true,
@@ -425,30 +362,31 @@ export const Slice3DShowcase: React.FC = () => {
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.maxDistance = 40;
-        controls.minDistance = 1.0;
+        controls.maxDistance = 45;
+        controls.minDistance = 1.2;
         controls.maxPolarAngle = Math.PI / 2 + 0.02;
 
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
-        scene.add(ambientLight);
+        // Clean Studio Lights
+        const ambient = new THREE.AmbientLight(0xffffff, 1.4);
+        scene.add(ambient);
 
-        const directionalLight = new THREE.DirectionalLight(0xfff7ed, 2.6);
-        directionalLight.position.set(10, 16, 12);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 2048;
-        directionalLight.shadow.mapSize.height = 2048;
-        scene.add(directionalLight);
+        const dirLight = new THREE.DirectionalLight(0xfff7ed, 2.6);
+        dirLight.position.set(12, 18, 14);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
 
-        const rimLight = new THREE.PointLight(0xFF5C00, 1.6, 25);
-        rimLight.position.set(-10, 8, -10);
+        const rimLight = new THREE.PointLight(0xFF5C00, 1.5, 30);
+        rimLight.position.set(-12, 8, -12);
         scene.add(rimLight);
 
-        const groundGrid = new THREE.GridHelper(20, 40, 0xFF5C00, 0xCBD5E1);
-        groundGrid.position.y = -0.16;
-        scene.add(groundGrid);
+        // Ground Cadmium Grid
+        const grid = new THREE.GridHelper(22, 44, 0xFF5C00, 0xCBD5E1);
+        grid.position.y = -0.16;
+        scene.add(grid);
 
-        const clippingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 2.0);
-        const clippingPlaneHelper = new THREE.PlaneHelper(clippingPlane, 14, 0xFF5C00);
+        // Dynamic Slicing Plane
+        const clippingPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), sliceHeight);
+        const clippingPlaneHelper = new THREE.PlaneHelper(clippingPlane, 16, 0xFF5C00);
         clippingPlaneHelper.visible = false;
         scene.add(clippingPlaneHelper);
 
@@ -467,26 +405,20 @@ export const Slice3DShowcase: React.FC = () => {
             furnitureGroup,
             clippingPlane,
             clippingPlaneHelper,
-            ambientLight,
-            directionalLight,
-            rimLight,
-            groundGrid,
             animFrameId: 0
         };
 
         let frameCount = 0;
-        let lastFpsTime = performance.now();
+        let lastTime = performance.now();
 
         const animate = (now: number) => {
             threeRefs.current!.animFrameId = requestAnimationFrame(animate);
-
             frameCount++;
-            if (now - lastFpsTime >= 500) {
-                setFps(Math.round((frameCount * 1000) / (now - lastFpsTime)));
+            if (now - lastTime >= 500) {
+                setFps(Math.round((frameCount * 1000) / (now - lastTime)));
                 frameCount = 0;
-                lastFpsTime = now;
+                lastTime = now;
             }
-
             controls.update();
             renderer.render(scene, camera);
         };
@@ -495,14 +427,14 @@ export const Slice3DShowcase: React.FC = () => {
         const resizeObserver = new ResizeObserver(() => {
             if (!container) return;
             const newW = container.clientWidth;
-            const newH = container.clientHeight || 520;
+            const newH = container.clientHeight || 500;
             camera.aspect = newW / newH;
             camera.updateProjectionMatrix();
             renderer.setSize(newW, newH);
         });
         resizeObserver.observe(container);
 
-        buildRoomGeometry(selectedPlan);
+        buildRoom();
 
         return () => {
             resizeObserver.disconnect();
@@ -516,12 +448,12 @@ export const Slice3DShowcase: React.FC = () => {
         };
     }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-    // Rebuild room when placed items change
+    // Rebuild room when roomDims or placedObjects change
     useEffect(() => {
-        buildRoomGeometry(selectedPlan);
-    }, [placedItems, selectedPlan, buildRoomGeometry]);
+        buildRoom();
+    }, [buildRoom]);
 
-    // Apply Dynamic Slicing
+    // Apply Slicing Plane
     useEffect(() => {
         const three = threeRefs.current;
         if (!three) return;
@@ -532,338 +464,620 @@ export const Slice3DShowcase: React.FC = () => {
             return;
         }
 
-        const normal = new THREE.Vector3();
-        if (sliceAxis === 'x') normal.set(1, 0, 0);
-        else if (sliceAxis === 'y') normal.set(0, 1, 0);
-        else normal.set(0, 0, 1);
-
-        if (sliceInvert) normal.negate();
-
-        const constant = -(slicePosition / 100) * 3.5;
-
-        three.clippingPlane.normal.copy(normal);
-        three.clippingPlane.constant = constant;
-
+        three.clippingPlane.constant = -sliceHeight;
         three.renderer.clippingPlanes = [three.clippingPlane];
-        if (three.clippingPlaneHelper) {
-            three.clippingPlaneHelper.visible = true;
-        }
-    }, [sliceEnabled, sliceAxis, slicePosition, sliceInvert]);
+        if (three.clippingPlaneHelper) three.clippingPlaneHelper.visible = true;
+    }, [sliceEnabled, sliceHeight]);
 
     // Apply Viewport Mode
     useEffect(() => {
         const three = threeRefs.current;
         if (!three) return;
 
-        three.roomGroup.traverse((child) => {
+        three.roomGroup.traverse(child => {
             if (child instanceof THREE.Mesh) {
                 if (viewportMode === 'wireframe') {
-                    child.material = new THREE.MeshBasicMaterial({
-                        color: 0xFF5C00,
-                        wireframe: true,
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
+                    child.material = new THREE.MeshBasicMaterial({ color: 0xFF5C00, wireframe: true, clippingPlanes: three.renderer.clippingPlanes });
                 } else if (viewportMode === 'clay') {
-                    child.material = new THREE.MeshStandardMaterial({
-                        color: 0xE2E8F0,
-                        roughness: 0.9,
-                        metalness: 0.05,
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
-                } else if (viewportMode === 'normals') {
-                    child.material = new THREE.MeshNormalMaterial({
-                        clippingPlanes: three.renderer.clippingPlanes
-                    });
+                    child.material = new THREE.MeshStandardMaterial({ color: 0xE2E8F0, roughness: 0.9, clippingPlanes: three.renderer.clippingPlanes });
                 }
             }
         });
     }, [viewportMode]);
 
-    // Apply Lighting Presets
-    useEffect(() => {
-        const three = threeRefs.current;
-        if (!three) return;
+    // -------------------------------------------------------------
+    // Chat & Spatial Prompt Handler
+    // -------------------------------------------------------------
+    const handleSendPrompt = (customPrompt?: string) => {
+        const text = (customPrompt || promptInput).trim();
+        if (!text && !attachedFloorImage) return;
 
-        switch (lightingPreset) {
-            case 'studio':
-                three.ambientLight.intensity = 1.4;
-                three.directionalLight.intensity = 2.6;
-                three.directionalLight.color.set(0xfff7ed);
-                three.rimLight.color.set(0xFF5C00);
-                break;
-            case 'sunset':
-                three.ambientLight.intensity = 0.9;
-                three.directionalLight.intensity = 3.4;
-                three.directionalLight.color.set(0xff7700);
-                three.rimLight.color.set(0x7c3aed);
-                break;
-            case 'cyberpunk':
-                three.ambientLight.intensity = 0.6;
-                three.directionalLight.intensity = 2.0;
-                three.directionalLight.color.set(0x00f0ff);
-                three.rimLight.color.set(0xff0055);
-                break;
-            case 'cad':
-                three.ambientLight.intensity = 2.2;
-                three.directionalLight.intensity = 1.0;
-                three.directionalLight.color.set(0xffffff);
-                break;
-        }
-    }, [lightingPreset]);
+        const userMsg: ChatMessage = {
+            id: `usr_${Date.now()}`,
+            sender: 'user',
+            text: text || 'Uploaded floor plan image for 3D reconstruction.',
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            attachedImage: attachedFloorImage || undefined
+        };
 
-    // Auto-Spin Effect
-    useEffect(() => {
-        const three = threeRefs.current;
-        if (!three) return;
-        three.controls.autoRotate = isAutoSpin;
-        three.controls.autoRotateSpeed = 1.0;
-    }, [isAutoSpin]);
+        setChatMessages(prev => [...prev, userMsg]);
+        setPromptInput('');
+        setAttachedFloorImage(null);
+        setIsAiProcessing(true);
 
-    // Add Furniture Item to Room
-    const addFurnitureItem = (item: FurnitureItem) => {
+        // AI Response Logic (Spatial Parser)
+        setTimeout(() => {
+            const lower = text.toLowerCase();
+            let replyText = '';
+            let badge = '';
+
+            if (userMsg.attachedImage || lower.includes('floor plan') || lower.includes('reconstruct') || lower.includes('villa') || lower.includes('blueprint')) {
+                // Resize / Extrude Floor
+                setRoomDims({ name: 'AI Reconstructed Spatial Environment', w: 14, d: 11, h: 3.0 });
+                replyText = 'Detected perimeter walls, interior partition grid, and doorway openings from your 2D plan. Reconstructed the 3D spatial shell with realistic drywall textures and 3.0m ceiling elevation.';
+                badge = 'Extruded 3D Space (14m × 11m)';
+            } else if (lower.includes('sofa') || lower.includes('living') || lower.includes('couch')) {
+                const sofa = assetVault.find(a => a.category.toLowerCase().includes('living')) || assetVault[1];
+                const newPlaced: PlacedObject = {
+                    instanceId: `inst_${Date.now()}`,
+                    asset: sofa,
+                    position: [1.8, 0.35, 1.0]
+                };
+                setPlacedObjects(prev => [...prev, newPlaced]);
+                replyText = `Retrieved "${sofa.name}" from your 3D Asset Vault and positioned it in the living room zone. Active BOQ updated.`;
+                badge = `Staged: ${sofa.name} (₹${sofa.priceINR.toLocaleString()})`;
+            } else if (lower.includes('bed') || lower.includes('bedroom')) {
+                const bed = assetVault.find(a => a.category.toLowerCase().includes('bed')) || assetVault[0];
+                const newPlaced: PlacedObject = {
+                    instanceId: `inst_${Date.now()}`,
+                    asset: bed,
+                    position: [-3.0, 0.4, -2.0]
+                };
+                setPlacedObjects(prev => [...prev, newPlaced]);
+                replyText = `Retrieved "${bed.name}" from your vault and staged it into the master bedroom suite.`;
+                badge = `Staged: ${bed.name}`;
+            } else if (lower.includes('slice') || lower.includes('roof') || lower.includes('section')) {
+                setSliceEnabled(true);
+                setSliceHeight(1.5);
+                replyText = 'Activated horizontal dynamic section slicing at 1.5m depth to reveal internal room layouts and staged furniture.';
+                badge = 'Slicing Active: 1.5m Depth';
+            } else if (lower.includes('boq') || lower.includes('cost') || lower.includes('quote') || lower.includes('price')) {
+                const total = placedObjects.reduce((acc, p) => acc + p.asset.priceINR, 0);
+                replyText = `Current Bill of Quantities tabulates ${placedObjects.length} staged pieces totaling ₹${total.toLocaleString()} INR (exclusive of 18% GST). Switch to the BOQ tab to export CSV or send quote over WhatsApp.`;
+                badge = `Total BOQ: ₹${Math.round(total * 1.18).toLocaleString()} (Inc GST)`;
+            } else {
+                replyText = `Synthesized your request: "${text}". Adjusted scene lighting, camera perspectives, and verified spatial bounds for mobile rendering.`;
+                badge = 'Scene Refined';
+            }
+
+            const aiMsg: ChatMessage = {
+                id: `ai_${Date.now()}`,
+                sender: 'assistant',
+                text: replyText,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                actionBadge: badge
+            };
+
+            setChatMessages(prev => [...prev, aiMsg]);
+            setIsAiProcessing(false);
+        }, 900);
+    };
+
+    // Handle Image Attachment for Floor Plan
+    const handleAttachFloorImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setAttachedFloorImage(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Handle Custom 3D Asset Addition to Vault
+    const handleAddAssetToVault = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newAssetName || !newAssetFile) return;
+
+        const newAsset: StoredAsset = {
+            id: `custom_${Date.now()}`,
+            name: newAssetName,
+            category: newAssetCategory,
+            priceINR: Number(newAssetPrice) || 25000,
+            dimensions: '1.8m × 0.9m',
+            fileName: newAssetFile.name,
+            fileSizeKB: Math.round(newAssetFile.size / 1024),
+            color: '#FF5C00',
+            isCustom: true
+        };
+
+        setAssetVault(prev => [newAsset, ...prev]);
+        setNewAssetName('');
+        setNewAssetPrice('32000');
+        setNewAssetFile(null);
+        setIsAddingAsset(false);
+
+        // Notify in Chat
+        setChatMessages(prev => [
+            ...prev,
+            {
+                id: `msg_vault_${Date.now()}`,
+                sender: 'assistant',
+                text: `Successfully saved new 3D model "${newAsset.name}" to your Asset Vault. You can now prompt me to stage this object into your 3D rooms!`,
+                timestamp: 'Just now',
+                actionBadge: `Vault Asset Saved (${newAsset.fileSizeKB} KB)`
+            }
+        ]);
+    };
+
+    // Stage Asset directly from Vault
+    const stageAssetFromVault = (asset: StoredAsset) => {
         const randomX = (Math.random() - 0.5) * 6;
         const randomZ = (Math.random() - 0.5) * 6;
-        const newItem: PlacedObject = {
-            instanceId: `inst_${Date.now()}`,
-            item,
-            position: [randomX, 0.35, randomZ]
-        };
-        setPlacedItems((prev) => [...prev, newItem]);
+        setPlacedObjects(prev => [
+            ...prev,
+            {
+                instanceId: `inst_${Date.now()}`,
+                asset,
+                position: [randomX, 0.35, randomZ]
+            }
+        ]);
+        setCurrentView('studio');
     };
 
-    // Remove Furniture Item
-    const removeFurnitureItem = (instanceId: string) => {
-        setPlacedItems((prev) => prev.filter(p => p.instanceId !== instanceId));
+    // Remove Placed Asset
+    const removePlacedObject = (instanceId: string) => {
+        setPlacedObjects(prev => prev.filter(p => p.instanceId !== instanceId));
     };
 
-    // Compute Bill of Quantities (BOQ)
-    const boqSubtotalINR = placedItems.reduce((acc, p) => acc + p.item.priceINR, 0);
-    const boqTaxINR = Math.round(boqSubtotalINR * 0.18);
-    const boqTotalINR = boqSubtotalINR + boqTaxINR;
+    // Compute BOQ Totals
+    const boqSubtotal = placedObjects.reduce((acc, p) => acc + p.asset.priceINR, 0);
+    const boqTax = Math.round(boqSubtotal * 0.18);
+    const boqTotal = boqSubtotal + boqTax;
 
-    const boqSubtotalUSD = placedItems.reduce((acc, p) => acc + p.item.priceUSD, 0);
-    const boqTotalUSD = Math.round(boqSubtotalUSD * 1.18);
-
-    // Export 4K Snapshot
+    // Export Snapshot
     const exportSnapshot = () => {
         const three = threeRefs.current;
         if (!three) return;
         three.renderer.render(three.scene, three.camera);
         const dataUrl = three.renderer.domElement.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `slice3d-${selectedPlan.id}-${Date.now()}.png`;
+        link.download = `slice3d-snapshot-${Date.now()}.png`;
         link.href = dataUrl;
         link.click();
     };
 
-    // Export BOQ as CSV
-    const exportBOQCSV = () => {
-        const headers = 'Item ID,Product Name,Category,Dimensions,Unit Price (INR),Tax (18% GST),Total (INR)\n';
-        const rows = placedItems.map(p => 
-            `"${p.item.id}","${p.item.name}","${p.item.category}","${p.item.dimensions}",${p.item.priceINR},${Math.round(p.item.priceINR * 0.18)},${Math.round(p.item.priceINR * 1.18)}`
-        ).join('\n');
-        const summary = `\n"SUBTOTAL","","",,${boqSubtotalINR}\n"GST (18%)","","",,${boqTaxINR}\n"GRAND TOTAL","","",,${boqTotalINR}\n`;
-        const blob = new Blob([headers + rows + summary], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `BOQ-${selectedPlan.name.replace(/\s+/g, '_')}-${Date.now()}.csv`;
-        a.click();
-    };
-
-    const setCameraView = (view: 'iso' | 'top' | 'walk') => {
-        const three = threeRefs.current;
-        if (!three) return;
-        setIsAutoSpin(false);
-
-        if (view === 'iso') {
-            three.camera.position.set(8, 7, 10);
-        } else if (view === 'top') {
-            three.camera.position.set(0, 16, 0.001);
-        } else {
-            three.camera.position.set(0, 1.6, 4);
-        }
-        three.controls.target.set(0, 0, 0);
-        three.controls.update();
-    };
-
-    const handlePlanImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-
-        const customPlan: SampleFloorPlan = {
-            id: `custom_plan_${Date.now()}`,
-            name: `Scanned: ${file.name.replace(/\.[^/.]+$/, '')}`,
-            tag: 'CUSTOM SCAN',
-            area: '1,200 sq.ft (Est)',
-            dims: '12.0m × 10.0m',
-            desc: 'Custom blueprint uploaded via mobile camera / local storage.',
-            glbFile: '/models/3d_floor_plan_2.glb',
-            previewSvgPath: 'M10 10 H90 V90 H10 Z M10 40 H90 M40 10 V90',
-            walls: [
-                { x: 0, z: -4, w: 9, d: 0.3, h: 2.8 },
-                { x: 0, z: 4, w: 9, d: 0.3, h: 2.8 },
-                { x: -4.5, z: 0, w: 0.3, d: 8, h: 2.8 },
-                { x: 4.5, z: 0, w: 0.3, d: 8, h: 2.8 },
-                { x: 0, z: 0, w: 0.3, d: 8, h: 2.8 }
-            ]
-        };
-
-        runFloorPlanScan(customPlan);
-    };
-
     return (
-        <div ref={containerRef} className="space-y-6">
+        <div ref={containerRef} className="space-y-4">
             <RepoSyncBar repoName="Slice3D" />
 
-            {/* THE FOUR PILLARS WORKFLOW STEPPER BAR */}
-            <div className="bg-white rounded-2xl border border-black/10 p-2 shadow-sm flex items-center justify-between gap-1 overflow-x-auto scrollbar-none">
-                <button
-                    onClick={() => setActiveTab('scan')}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
-                        activeTab === 'scan'
-                            ? 'bg-[#FF5C00] text-white shadow-sm'
-                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
-                    }`}
-                >
-                    <Scan className="w-4 h-4" />
-                    <span>1. AI Plan Scanner</span>
-                </button>
+            {/* MINIMAL BRANDED HEADER */}
+            <div className="bg-white rounded-2xl border border-black/10 p-3 sm:p-4 shadow-sm flex items-center justify-between gap-3">
+                {/* Brand Identity: A Generative Slice Logo + SLICE 3D */}
+                <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl overflow-hidden border border-black/10 shrink-0 shadow-sm">
+                        <img src={logoImg} alt="A Generative Slice" className="w-full h-full object-cover" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-sm tracking-wider uppercase font-heading text-[#0F172A]">
+                                SLICE 3D
+                            </span>
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00]">
+                                STUDIO
+                            </span>
+                        </div>
+                        <span className="text-[10px] text-[#64748B] hidden sm:block">
+                            By A Generative Slice • AI Spatial Floor Engine
+                        </span>
+                    </div>
+                </div>
 
-                <ChevronRight className="w-3.5 h-3.5 text-black/20 shrink-0 hidden sm:block" />
+                {/* Minimal Top Navigation Tabs */}
+                <div className="flex items-center gap-1.5 bg-black/[0.03] p-1 rounded-xl">
+                    <button
+                        onClick={() => setCurrentView('studio')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-heading transition-all ${
+                            currentView === 'studio'
+                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
+                                : 'text-[#64748B] hover:text-[#0F172A]'
+                        }`}
+                    >
+                        3D Studio &amp; Chat
+                    </button>
 
-                <button
-                    onClick={() => setActiveTab('walkthrough')}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
-                        activeTab === 'walkthrough'
-                            ? 'bg-[#FF5C00] text-white shadow-sm'
-                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
-                    }`}
-                >
-                    <Box className="w-4 h-4" />
-                    <span>2. 3D Spatial Walkthrough</span>
-                </button>
+                    <button
+                        onClick={() => setCurrentView('vault')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-heading transition-all ${
+                            currentView === 'vault'
+                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
+                                : 'text-[#64748B] hover:text-[#0F172A]'
+                        }`}
+                    >
+                        3D Asset Vault ({assetVault.length})
+                    </button>
 
-                <ChevronRight className="w-3.5 h-3.5 text-black/20 shrink-0 hidden sm:block" />
-
-                <button
-                    onClick={() => setActiveTab('furnish')}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
-                        activeTab === 'furnish'
-                            ? 'bg-[#FF5C00] text-white shadow-sm'
-                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
-                    }`}
-                >
-                    <Sofa className="w-4 h-4" />
-                    <span>3. Furnish &amp; BOQ ({placedItems.length})</span>
-                </button>
-
-                <ChevronRight className="w-3.5 h-3.5 text-black/20 shrink-0 hidden sm:block" />
-
-                <button
-                    onClick={() => setActiveTab('export')}
-                    className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 font-heading min-h-[42px] ${
-                        activeTab === 'export'
-                            ? 'bg-[#FF5C00] text-white shadow-sm'
-                            : 'text-[#64748B] hover:bg-black/5 hover:text-[#0F172A]'
-                    }`}
-                >
-                    <Download className="w-4 h-4" />
-                    <span>4. Universal CAD Export</span>
-                </button>
+                    <button
+                        onClick={() => setCurrentView('boq')}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold font-heading transition-all ${
+                            currentView === 'boq'
+                                ? 'bg-white text-[#FF5C00] shadow-sm font-extrabold'
+                                : 'text-[#64748B] hover:text-[#0F172A]'
+                        }`}
+                    >
+                        Live BOQ (₹{boqTotal.toLocaleString()})
+                    </button>
+                </div>
             </div>
 
-            {/* TAB 1: 2D FLOOR PLAN AI SCANNER */}
-            {activeTab === 'scan' && (
-                <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-5">
+            {/* VIEW 1: STUDIO (3D CANVAS + AI CHAT CO-PILOT) */}
+            {currentView === 'studio' && (
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    {/* LEFT / MOBILE BOTTOM: AI CHAT CO-PILOT (4 COLS) */}
+                    <div className="lg:col-span-5 bg-white rounded-2xl border border-black/10 shadow-sm flex flex-col h-[520px] sm:h-[580px] overflow-hidden">
+                        {/* Chat Header */}
+                        <div className="p-3.5 border-b border-black/5 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-lg bg-[#FF5C00]/10 flex items-center justify-center text-[#FF5C00]">
+                                    <Bot className="w-4 h-4" />
+                                </div>
+                                <div>
+                                    <h4 className="font-extrabold text-xs text-[#0F172A] font-heading">
+                                        Spatial AI Co-Pilot
+                                    </h4>
+                                    <p className="text-[10px] text-[#64748B]">Attach 2D plan &amp; prompt modifications</p>
+                                </div>
+                            </div>
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                        </div>
+
+                        {/* Chat Stream */}
+                        <div className="flex-grow p-3 space-y-3 overflow-y-auto text-xs">
+                            {chatMessages.map(msg => (
+                                <div
+                                    key={msg.id}
+                                    className={`flex items-start gap-2.5 ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}
+                                >
+                                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-white ${
+                                        msg.sender === 'user' ? 'bg-[#0F172A]' : 'bg-[#FF5C00]'
+                                    }`}>
+                                        {msg.sender === 'user' ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
+                                    </div>
+
+                                    <div className={`max-w-[85%] rounded-2xl p-3 space-y-1.5 ${
+                                        msg.sender === 'user' 
+                                            ? 'bg-[#0F172A] text-white' 
+                                            : 'bg-black/[0.03] text-[#0F172A] border border-black/5'
+                                    }`}>
+                                        {msg.attachedImage && (
+                                            <div className="w-36 h-24 rounded-lg overflow-hidden border border-white/20 mb-1">
+                                                <img src={msg.attachedImage} alt="Attached 2D Plan" className="w-full h-full object-cover" />
+                                            </div>
+                                        )}
+                                        <p className="leading-relaxed">{msg.text}</p>
+                                        {msg.actionBadge && (
+                                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#FF5C00]/15 text-[#FF5C00]">
+                                                <Sparkles className="w-3 h-3" />
+                                                <span>{msg.actionBadge}</span>
+                                            </div>
+                                        )}
+                                        <span className={`block text-[9px] ${msg.sender === 'user' ? 'text-white/50' : 'text-[#64748B]'}`}>
+                                            {msg.timestamp}
+                                        </span>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {isAiProcessing && (
+                                <div className="flex items-center gap-2 p-3 rounded-xl bg-[#FF5C00]/5 text-[#FF5C00] text-xs">
+                                    <Sparkles className="w-4 h-4 animate-spin" />
+                                    <span>AI is synthesizing 3D geometry &amp; asset layout...</span>
+                                </div>
+                            )}
+                            <div ref={chatEndRef} />
+                        </div>
+
+                        {/* Quick Prompt Chips */}
+                        <div className="px-3 py-2 border-t border-black/5 flex items-center gap-1.5 overflow-x-auto scrollbar-none">
+                            <button
+                                onClick={() => handleSendPrompt('Convert this floor plan to a luxury 2BHK 3D villa')}
+                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
+                            >
+                                ✨ Reconstruct 2BHK Plan
+                            </button>
+                            <button
+                                onClick={() => handleSendPrompt('Add a living room sofa and stage with white oak furniture')}
+                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
+                            >
+                                🛋️ Stage Living Room
+                            </button>
+                            <button
+                                onClick={() => handleSendPrompt('Slice roof at 1.5m to inspect interior layout')}
+                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
+                            >
+                                🔪 Slice at 1.5m
+                            </button>
+                            <button
+                                onClick={() => handleSendPrompt('Calculate current active BOQ estimate')}
+                                className="px-2.5 py-1 rounded-lg bg-black/[0.03] hover:bg-[#FF5C00]/10 hover:text-[#FF5C00] text-[10px] font-bold shrink-0 transition-colors"
+                            >
+                                📊 Calculate BOQ
+                            </button>
+                        </div>
+
+                        {/* Input & Image Attachment Tray */}
+                        <div className="p-3 border-t border-black/5 space-y-2 bg-[#FAFAFA]">
+                            {attachedFloorImage && (
+                                <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-[#FF5C00]/30 text-xs">
+                                    <div className="flex items-center gap-2">
+                                        <ImageIcon className="w-4 h-4 text-[#FF5C00]" />
+                                        <span className="font-bold text-[11px] text-[#0F172A]">2D Floor Plan Attached</span>
+                                    </div>
+                                    <button onClick={() => setAttachedFloorImage(null)} className="text-[#64748B] hover:text-red-500">
+                                        <X className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="file"
+                                    ref={floorPlanFileInputRef}
+                                    onChange={handleAttachFloorImage}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <button
+                                    onClick={() => floorPlanFileInputRef.current?.click()}
+                                    className="p-2.5 rounded-xl border border-black/10 bg-white hover:bg-black/5 text-[#64748B] hover:text-[#FF5C00] transition-colors min-h-[42px] min-w-[42px] flex items-center justify-center cursor-pointer"
+                                    title="Attach 2D Floor Plan Photo"
+                                >
+                                    <Paperclip className="w-4 h-4" />
+                                </button>
+
+                                <input
+                                    type="text"
+                                    value={promptInput}
+                                    onChange={e => setPromptInput(e.target.value)}
+                                    onKeyDown={e => e.key === 'Enter' && handleSendPrompt()}
+                                    placeholder="Prompt AI to extrude plan, add furniture, slice..."
+                                    className="flex-grow px-3.5 py-2 rounded-xl bg-white border border-black/10 text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00] min-h-[42px]"
+                                />
+
+                                <button
+                                    onClick={() => handleSendPrompt()}
+                                    className="p-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white transition-all min-h-[42px] min-w-[42px] flex items-center justify-center shadow-sm cursor-pointer"
+                                >
+                                    <Send className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* RIGHT: THE 3D SPATIAL CANVAS (7 COLS) */}
+                    <div className="lg:col-span-7 relative rounded-2xl border border-black/10 bg-gradient-to-b from-[#f8fafc] to-[#edf2f7] overflow-hidden shadow-lg h-[520px] sm:h-[580px]">
+                        {/* Minimal Telemetry Overlay */}
+                        <div className="absolute top-3 left-3 z-20 flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md border border-black/10 text-xs font-mono shadow-sm pointer-events-none">
+                            <span className="font-bold text-[#FF5C00]">{fps} FPS</span>
+                            <span className="text-black/20">|</span>
+                            <span className="text-[#64748B]">{polyCount.toLocaleString()} Triangles</span>
+                        </div>
+
+                        {/* Top-Right Tools: Camera & Snapshot */}
+                        <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/10 p-1 rounded-xl shadow-sm">
+                            <button
+                                onClick={exportSnapshot}
+                                className="p-1.5 rounded-lg text-[#64748B] hover:text-[#FF5C00] transition-colors"
+                                title="Export Snapshot"
+                            >
+                                <Camera className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+
+                        {/* The Three.js Canvas */}
+                        <div 
+                            ref={canvasContainerRef} 
+                            className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+                        />
+
+                        {/* Minimal Bottom Floating Controls: Viewport Mode & Slicing */}
+                        <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
+                            <div className="flex items-center gap-1 p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-md pointer-events-auto">
+                                {(['pbr', 'clay', 'wireframe'] as ViewportMode[]).map(mode => (
+                                    <button
+                                        key={mode}
+                                        onClick={() => setViewportMode(mode)}
+                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all font-heading ${
+                                            viewportMode === mode
+                                                ? 'bg-[#FF5C00] text-white shadow-sm'
+                                                : 'text-[#64748B] hover:text-[#0F172A]'
+                                        }`}
+                                    >
+                                        {mode}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Minimal Slice Tool Toggle */}
+                            <div className="flex items-center gap-2 p-1.5 px-2.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-md pointer-events-auto">
+                                <button
+                                    onClick={() => setSliceEnabled(!sliceEnabled)}
+                                    className={`flex items-center gap-1.5 text-xs font-bold transition-all ${
+                                        sliceEnabled ? 'text-[#FF5C00]' : 'text-[#64748B]'
+                                    }`}
+                                >
+                                    <Scissors className="w-3.5 h-3.5" />
+                                    <span className="text-[11px] font-heading">{sliceEnabled ? 'Slice: ON' : 'Slice'}</span>
+                                </button>
+                                {sliceEnabled && (
+                                    <input
+                                        type="range"
+                                        min="0"
+                                        max="3.5"
+                                        step="0.1"
+                                        value={sliceHeight}
+                                        onChange={e => setSliceHeight(Number(e.target.value))}
+                                        className="w-20 h-1 bg-black/10 rounded-lg appearance-none cursor-pointer accent-[#FF5C00]"
+                                    />
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* VIEW 2: 3D ASSET VAULT (PRODUCT ADDING & MANAGEMENT) */}
+            {currentView === 'vault' && (
+                <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/5">
                         <div>
                             <div className="flex items-center gap-2">
-                                <Scan className="w-5 h-5 text-[#FF5C00]" />
+                                <Box className="w-5 h-5 text-[#FF5C00]" />
                                 <h3 className="font-extrabold text-base text-[#0F172A] font-heading">
-                                    Instant Mobile AI Floor Plan Generator
+                                    3D Asset Vault &amp; Product Management
                                 </h3>
                             </div>
                             <p className="text-xs text-[#64748B] mt-0.5">
-                                Select an architectural blueprint sample below or snap a 2D floor plan photo to reconstruct a 3D environment.
+                                Add your custom 3D files (.GLB, .GLTF, .OBJ) with itemized prices to stage into floor generation or prompt via AI.
                             </p>
                         </div>
 
-                        <input
-                            type="file"
-                            ref={planImageInputRef}
-                            onChange={handlePlanImageUpload}
-                            accept="image/*,.pdf"
-                            className="hidden"
-                        />
                         <button
-                            onClick={() => planImageInputRef.current?.click()}
-                            className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-sm font-heading min-h-[44px] cursor-pointer"
+                            onClick={() => setIsAddingAsset(true)}
+                            className="px-4 py-2.5 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm font-heading cursor-pointer min-h-[42px]"
                         >
-                            <Upload className="w-4 h-4" />
-                            <span>Snap / Upload Floor Plan</span>
+                            <FolderPlus className="w-4 h-4" />
+                            <span>Add New 3D Asset</span>
                         </button>
                     </div>
 
-                    {isScanning && (
-                        <div className="p-6 rounded-2xl bg-black/[0.02] border border-[#FF5C00]/30 space-y-3">
-                            <div className="flex items-center justify-between text-xs font-heading">
-                                <span className="font-bold text-[#0F172A] flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4 text-[#FF5C00] animate-spin" />
-                                    {scanMessage}
-                                </span>
-                                <span className="font-mono font-bold text-[#FF5C00]">{scanProgress}%</span>
+                    {/* Add New Asset Form Modal / Box */}
+                    {isAddingAsset && (
+                        <form onSubmit={handleAddAssetToVault} className="p-5 rounded-2xl bg-[#FF5C00]/[0.02] border border-[#FF5C00]/30 space-y-4">
+                            <div className="flex items-center justify-between">
+                                <h4 className="font-extrabold text-sm text-[#0F172A] font-heading">Upload Custom 3D Object</h4>
+                                <button type="button" onClick={() => setIsAddingAsset(false)} className="text-[#64748B] hover:text-black">
+                                    <X className="w-4 h-4" />
+                                </button>
                             </div>
-                            <div className="w-full h-2 bg-black/10 rounded-full overflow-hidden">
-                                <div 
-                                    className="h-full bg-[#FF5C00] transition-all duration-300"
-                                    style={{ width: `${scanProgress}%` }}
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
+                                        Product / Asset Name
+                                    </label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={newAssetName}
+                                        onChange={e => setNewAssetName(e.target.value)}
+                                        placeholder="e.g. Italian Marble Dining Table"
+                                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00]"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
+                                        Category
+                                    </label>
+                                    <select
+                                        value={newAssetCategory}
+                                        onChange={e => setNewAssetCategory(e.target.value)}
+                                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00]"
+                                    >
+                                        <option value="Living">Living Room</option>
+                                        <option value="Bedroom">Bedroom</option>
+                                        <option value="Dining">Dining</option>
+                                        <option value="Office">Office</option>
+                                        <option value="Lighting">Lighting</option>
+                                        <option value="Kitchen">Kitchen</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
+                                        Unit Price (INR ₹)
+                                    </label>
+                                    <input
+                                        type="number"
+                                        value={newAssetPrice}
+                                        onChange={e => setNewAssetPrice(e.target.value)}
+                                        placeholder="32000"
+                                        className="w-full px-3 py-2 rounded-xl border border-black/10 bg-white text-xs text-[#0F172A] focus:outline-none focus:border-[#FF5C00]"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* 3D Model File Picker */}
+                            <div>
+                                <label className="text-[10px] font-bold uppercase tracking-wider text-[#64748B] block mb-1">
+                                    3D Model Geometry (.GLB / .GLTF)
+                                </label>
+                                <input
+                                    type="file"
+                                    required
+                                    ref={customAssetFileInputRef}
+                                    onChange={e => setNewAssetFile(e.target.files?.[0] || null)}
+                                    accept=".glb,.gltf,.obj"
+                                    className="text-xs text-[#64748B] file:mr-3 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#FF5C00]/10 file:text-[#FF5C00] hover:file:bg-[#FF5C00]/20"
                                 />
                             </div>
-                        </div>
+
+                            <div className="flex items-center justify-end gap-2 pt-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsAddingAsset(false)}
+                                    className="px-4 py-2 rounded-xl border border-black/10 text-xs font-semibold text-[#64748B]"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-5 py-2 rounded-xl bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-xs font-bold transition-all shadow-sm font-heading cursor-pointer"
+                                >
+                                    Save Asset to Vault
+                                </button>
+                            </div>
+                        </form>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {SAMPLE_PLANS.map((plan) => (
+                    {/* Stored Assets Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                        {assetVault.map(asset => (
                             <div
-                                key={plan.id}
-                                onClick={() => runFloorPlanScan(plan)}
-                                className={`p-4 rounded-xl border transition-all cursor-pointer flex flex-col justify-between ${
-                                    selectedPlan.id === plan.id
-                                        ? 'border-[#FF5C00] bg-[#FF5C00]/[0.02] shadow-md ring-1 ring-[#FF5C00]/20'
-                                        : 'border-black/10 bg-white hover:border-[#FF5C00]/40'
-                                }`}
+                                key={asset.id}
+                                className="p-4 rounded-xl border border-black/10 bg-black/[0.01] hover:bg-[#FF5C00]/[0.02] hover:border-[#FF5C00]/30 transition-all flex flex-col justify-between space-y-3"
                             >
-                                <div className="space-y-2.5">
-                                    <div className="w-full h-28 bg-[#0F172A] rounded-lg p-3 flex items-center justify-center relative overflow-hidden">
-                                        <svg className="w-full h-full stroke-emerald-400 stroke-2 fill-none opacity-80" viewBox="0 0 100 100">
-                                            <path d={plan.previewSvgPath} />
-                                        </svg>
-                                        <span className="absolute bottom-2 right-2 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-white/10 text-white">
-                                            {plan.dims}
+                                <div>
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-mono uppercase font-bold text-[#64748B]">
+                                            {asset.category}
+                                        </span>
+                                        <span className="text-xs font-mono font-bold text-[#0F172A]">
+                                            ₹{asset.priceINR.toLocaleString()}
                                         </span>
                                     </div>
-
-                                    <div>
-                                        <div className="flex items-center justify-between gap-1">
-                                            <h4 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                                                {plan.name}
-                                            </h4>
-                                            <span className="px-2 py-0.5 rounded text-[9px] font-mono font-bold bg-black/5 text-[#64748B]">
-                                                {plan.tag}
-                                            </span>
-                                        </div>
-                                        <p className="text-[11px] text-[#64748B] mt-1 leading-relaxed">
-                                            {plan.desc}
-                                        </p>
+                                    <h4 className="font-extrabold text-xs text-[#0F172A] mt-1 font-heading">
+                                        {asset.name}
+                                    </h4>
+                                    <div className="flex items-center gap-2 mt-1 text-[10px] text-[#64748B] font-mono">
+                                        <span>{asset.dimensions}</span>
+                                        <span>•</span>
+                                        <span>{asset.fileName} ({asset.fileSizeKB} KB)</span>
                                     </div>
                                 </div>
 
-                                <div className="pt-3 border-t border-black/5 mt-3 flex items-center justify-between text-xs font-heading">
-                                    <span className="font-bold text-[#FF5C00]">{plan.area}</span>
-                                    <span className="text-[#64748B] flex items-center gap-1 font-semibold">
-                                        Reconstruct 3D <ChevronRight className="w-3.5 h-3.5" />
+                                <div className="pt-2 border-t border-black/5 flex items-center justify-between">
+                                    <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">
+                                        <CheckCircle2 className="w-3 h-3" /> Ready
                                     </span>
+                                    <button
+                                        onClick={() => stageAssetFromVault(asset)}
+                                        className="px-3 py-1.5 rounded-lg bg-[#FF5C00] hover:bg-[#FF8C1A] text-white text-[11px] font-bold transition-all font-heading cursor-pointer"
+                                    >
+                                        Stage in 3D
+                                    </button>
                                 </div>
                             </div>
                         ))}
@@ -871,367 +1085,86 @@ export const Slice3DShowcase: React.FC = () => {
                 </div>
             )}
 
-            {/* TAB 2 & 3: THE LIVE 3D SPATIAL WORKSPACE */}
-            <div className="relative rounded-2xl sm:rounded-3xl border border-black/10 bg-gradient-to-b from-[#f8fafc] to-[#edf2f7] overflow-hidden shadow-xl">
-                <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-none">
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white/90 backdrop-blur-md border border-black/10 shadow-sm pointer-events-auto">
-                        <Activity className="w-3.5 h-3.5 text-[#FF5C00]" />
-                        <span className="text-xs font-mono font-bold text-[#0F172A]">{fps} FPS</span>
-                        <span className="text-black/20 font-mono">|</span>
-                        <span className="text-[11px] font-mono text-[#64748B]">
-                            {selectedPlan.name} ({polyCount.triangles.toLocaleString()} Triangles)
-                        </span>
-                    </div>
-                </div>
-
-                <div className="absolute top-3 right-3 z-20 flex items-center gap-1 bg-white/90 backdrop-blur-md border border-black/10 p-1 rounded-xl shadow-sm">
-                    <button
-                        onClick={() => setCameraView('iso')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#0F172A] hover:bg-black/5 transition-all font-heading"
-                    >
-                        ISO
-                    </button>
-                    <button
-                        onClick={() => setCameraView('top')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#0F172A] hover:bg-black/5 transition-all font-heading"
-                    >
-                        2D Plan
-                    </button>
-                    <button
-                        onClick={() => setCameraView('walk')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider text-[#0F172A] hover:bg-black/5 transition-all font-heading"
-                    >
-                        Walk
-                    </button>
-                    <button
-                        onClick={exportSnapshot}
-                        className="p-1.5 rounded-lg text-[#64748B] hover:text-[#FF5C00] transition-colors"
-                        title="Snapshot"
-                    >
-                        <Camera className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-
-                <div 
-                    ref={canvasContainerRef} 
-                    className="w-full h-[420px] sm:h-[540px] md:h-[600px] cursor-grab active:cursor-grabbing touch-none"
-                />
-
-                <div className="absolute bottom-3 left-3 right-3 z-20 flex items-center justify-between gap-2 pointer-events-none">
-                    <div className="flex items-center gap-1.5 p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-lg pointer-events-auto max-w-[calc(100%-80px)] overflow-x-auto scrollbar-none">
-                        {(['pbr', 'clay', 'wireframe', 'normals'] as ViewportMode[]).map((mode) => (
-                            <button
-                                key={mode}
-                                onClick={() => setViewportMode(mode)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shrink-0 font-heading min-h-[36px] ${
-                                    viewportMode === mode
-                                        ? 'bg-[#FF5C00] text-white shadow-sm'
-                                        : 'text-[#64748B] hover:text-[#0F172A] hover:bg-black/5'
-                                }`}
-                            >
-                                {mode}
-                            </button>
-                        ))}
-                    </div>
-
-                    <div className="p-1.5 rounded-2xl bg-white/95 backdrop-blur-md border border-black/10 shadow-lg pointer-events-auto">
-                        <button
-                            onClick={() => setIsAutoSpin(!isAutoSpin)}
-                            className={`p-2 rounded-xl transition-all min-h-[36px] min-w-[36px] flex items-center justify-center ${
-                                isAutoSpin ? 'bg-[#FF5C00]/15 text-[#FF5C00]' : 'text-[#64748B]'
-                            }`}
-                        >
-                            {isAutoSpin ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* INTERACTIVE CONTROLS TRAY: Mesh Slicing & Lighting Rig */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Dynamic Mesh Slicing Tool */}
-                <div className={`p-4 rounded-2xl border transition-all ${
-                    sliceEnabled ? 'bg-white border-[#FF5C00]/40 shadow-md' : 'bg-white border-black/10 shadow-sm'
-                }`}>
-                    <div className="flex items-center justify-between pb-2.5 border-b border-black/5 mb-3">
-                        <div className="flex items-center gap-2">
-                            <Scissors className="w-4 h-4 text-[#FF5C00]" />
-                            <span className="font-extrabold text-xs text-[#0F172A] font-heading">
-                                Dynamic Slicing Engine (Section Cut)
-                            </span>
-                        </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={sliceEnabled}
-                                onChange={(e) => setSliceEnabled(e.target.checked)}
-                                className="sr-only peer"
-                            />
-                            <div className="w-9 h-5 bg-black/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#FF5C00]" />
-                        </label>
-                    </div>
-
-                    <div className={`space-y-3 ${!sliceEnabled ? 'opacity-40 pointer-events-none' : ''}`}>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1 bg-black/5 p-1 rounded-xl">
-                                {(['x', 'y', 'z'] as SliceAxis[]).map((axis) => (
-                                    <button
-                                        key={axis}
-                                        onClick={() => setSliceAxis(axis)}
-                                        className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase transition-all font-mono ${
-                                            sliceAxis === axis ? 'bg-white text-[#FF5C00] shadow-sm' : 'text-[#64748B]'
-                                        }`}
-                                    >
-                                        {axis.toUpperCase()}
-                                    </button>
-                                ))}
-                            </div>
-
-                            <button
-                                onClick={() => setSliceInvert(!sliceInvert)}
-                                className="px-2.5 py-1 rounded-lg border border-black/10 text-[10px] font-bold text-[#64748B] hover:text-[#0F172A]"
-                            >
-                                {sliceInvert ? 'Inverted' : 'Normal'}
-                            </button>
-                        </div>
-
+            {/* VIEW 3: LIVE BILL OF QUANTITIES (BOQ) & UNIVERSAL EXPORT */}
+            {currentView === 'boq' && (
+                <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-6">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-black/5">
                         <div>
-                            <input
-                                type="range"
-                                min="-100"
-                                max="100"
-                                value={slicePosition}
-                                onChange={(e) => setSlicePosition(Number(e.target.value))}
-                                className="w-full h-1.5 bg-black/10 rounded-lg appearance-none cursor-pointer accent-[#FF5C00]"
-                            />
-                        </div>
-                    </div>
-                </div>
-
-                {/* Studio Lighting Rig */}
-                <div className="bg-white p-4 rounded-2xl border border-black/10 shadow-sm space-y-2.5">
-                    <div className="flex items-center gap-2 pb-2.5 border-b border-black/5">
-                        <Sun className="w-4 h-4 text-[#FF5C00]" />
-                        <span className="font-extrabold text-xs text-[#0F172A] font-heading">
-                            Lighting Rig Preset
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-1.5">
-                        {(['studio', 'sunset', 'cyberpunk', 'cad'] as LightingPreset[]).map((preset) => (
-                            <button
-                                key={preset}
-                                onClick={() => setLightingPreset(preset)}
-                                className={`py-1.5 rounded-xl text-xs font-bold capitalize transition-all border font-heading ${
-                                    lightingPreset === preset
-                                        ? 'bg-[#FF5C00]/10 border-[#FF5C00]/40 text-[#FF5C00]'
-                                        : 'bg-black/[0.02] border-black/10 text-[#64748B] hover:text-[#0F172A]'
-                                }`}
-                            >
-                                {preset}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
-
-            {/* TAB 3: CUSTOM FURNITURE CATALOG & ACTIVE BILL OF QUANTITIES (BOQ) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                {/* LEFT: Modular Furniture Catalog Tray */}
-                <div className="bg-white p-5 rounded-2xl border border-black/10 shadow-sm space-y-4">
-                    <div className="flex items-center justify-between pb-3 border-b border-black/5">
-                        <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 rounded-xl bg-[#FF5C00]/10 flex items-center justify-center text-[#FF5C00]">
-                                <Sofa className="w-4 h-4" />
-                            </div>
-                            <div>
-                                <h3 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                                    Interior Decor &amp; Furniture Catalog
-                                </h3>
-                                <p className="text-[11px] text-[#64748B]">Click to stage in 3D and update active BOQ</p>
-                            </div>
-                        </div>
-                        <span className="text-xs font-mono font-bold text-[#FF5C00]">
-                            {placedItems.length} Staged
-                        </span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-1">
-                        {FURNITURE_CATALOG.map((item) => (
-                            <div
-                                key={item.id}
-                                className="p-3 rounded-xl border border-black/5 hover:border-[#FF5C00]/40 bg-black/[0.01] hover:bg-[#FF5C00]/[0.02] transition-all flex flex-col justify-between"
-                            >
-                                <div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-[10px] font-mono uppercase text-[#64748B] font-bold">
-                                            {item.category}
-                                        </span>
-                                        <span className="text-xs font-mono font-bold text-[#0F172A]">
-                                            ₹{item.priceINR.toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <h4 className="font-bold text-xs text-[#0F172A] mt-1 line-clamp-1 font-heading">
-                                        {item.name}
-                                    </h4>
-                                    <p className="text-[10px] text-[#64748B] mt-0.5">{item.dimensions}</p>
-                                </div>
-
-                                <button
-                                    onClick={() => addFurnitureItem(item)}
-                                    className="mt-2.5 w-full py-1.5 rounded-lg bg-black/[0.04] hover:bg-[#FF5C00] hover:text-white text-[#0F172A] text-[11px] font-bold transition-all flex items-center justify-center gap-1 font-heading cursor-pointer min-h-[32px]"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                    <span>Place in 3D</span>
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                {/* RIGHT: LIVE BILL OF QUANTITIES (BOQ) TABLE */}
-                <div className="bg-white p-5 rounded-2xl border border-black/10 shadow-sm space-y-4 flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center justify-between pb-3 border-b border-black/5">
                             <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-                                    <CheckCircle2 className="w-4 h-4" />
-                                </div>
-                                <div>
-                                    <h3 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                                        Active Bill of Quantities (BOQ)
-                                    </h3>
-                                    <p className="text-[11px] text-[#64748B]">Real-time itemized pricing &amp; tax calculation</p>
-                                </div>
+                                <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                <h3 className="font-extrabold text-base text-[#0F172A] font-heading">
+                                    Live Bill of Quantities (BOQ) &amp; Client Quotation
+                                </h3>
                             </div>
-                            <button
-                                onClick={exportBOQCSV}
-                                className="px-2.5 py-1.5 rounded-xl border border-black/10 hover:border-[#FF5C00]/30 text-xs font-semibold text-[#0F172A] flex items-center gap-1 transition-all cursor-pointer min-h-[34px]"
+                            <p className="text-xs text-[#64748B] mt-0.5">
+                                Real-time itemized procurement pricing tied directly to the 3D staged spatial layout.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                            <a
+                                href={`https://wa.me/?text=${encodeURIComponent(`Check out our custom 3D architectural plan with live BOQ (₹${boqTotal.toLocaleString()}) on Slice3D: https://agenerativeslice.info/slice-3d`)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all flex items-center gap-1.5 font-heading"
                             >
-                                <Download className="w-3 h-3 text-[#FF5C00]" />
-                                <span>Export CSV</span>
-                            </button>
+                                <Share2 className="w-3.5 h-3.5" />
+                                <span>Share Quote via WhatsApp</span>
+                            </a>
                         </div>
+                    </div>
 
-                        <div className="space-y-1.5 max-h-56 overflow-y-auto mt-3 pr-1">
-                            {placedItems.length === 0 ? (
-                                <div className="text-center py-8 text-xs text-[#64748B]">
-                                    No furniture staged yet. Select pieces from the catalog on the left.
-                                </div>
-                            ) : (
-                                placedItems.map((p) => (
-                                    <div
-                                        key={p.instanceId}
-                                        className="flex items-center justify-between p-2 rounded-lg bg-black/[0.02] border border-black/5 text-xs"
-                                    >
-                                        <div className="min-w-0 pr-2">
-                                            <span className="font-bold text-[#0F172A] block truncate font-heading">
-                                                {p.item.name}
-                                            </span>
-                                            <span className="text-[10px] text-[#64748B]">
-                                                {p.item.category} • {p.item.dimensions}
-                                            </span>
-                                        </div>
-
-                                        <div className="flex items-center gap-3 shrink-0">
-                                            <span className="font-mono font-bold text-[#0F172A]">
-                                                ₹{p.item.priceINR.toLocaleString()}
-                                            </span>
-                                            <button
-                                                onClick={() => removeFurnitureItem(p.instanceId)}
-                                                className="p-1 rounded text-red-500 hover:bg-red-50 transition-colors"
-                                                title="Remove Item"
-                                            >
-                                                <Trash2 className="w-3.5 h-3.5" />
-                                            </button>
-                                        </div>
+                    {/* Staged Items Table */}
+                    <div className="space-y-2 max-h-72 overflow-y-auto">
+                        {placedObjects.length === 0 ? (
+                            <div className="text-center py-10 text-xs text-[#64748B]">
+                                No assets staged in the 3D room yet. Stage items from the Studio Chat or Asset Vault.
+                            </div>
+                        ) : (
+                            placedObjects.map(p => (
+                                <div
+                                    key={p.instanceId}
+                                    className="flex items-center justify-between p-3 rounded-xl bg-black/[0.01] border border-black/5 text-xs"
+                                >
+                                    <div>
+                                        <span className="font-bold text-[#0F172A] block font-heading">{p.asset.name}</span>
+                                        <span className="text-[10px] text-[#64748B]">
+                                            {p.asset.category} • {p.asset.dimensions} • {p.asset.fileName}
+                                        </span>
                                     </div>
-                                ))
-                            )}
-                        </div>
+                                    <div className="flex items-center gap-3">
+                                        <span className="font-mono font-bold text-[#0F172A]">
+                                            ₹{p.asset.priceINR.toLocaleString()}
+                                        </span>
+                                        <button
+                                            onClick={() => removePlacedObject(p.instanceId)}
+                                            className="text-red-500 hover:text-red-700 p-1"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
 
-                    <div className="pt-3 border-t border-black/5 space-y-1.5">
+                    {/* Financial Summary */}
+                    <div className="pt-4 border-t border-black/5 space-y-2 max-w-sm ml-auto">
                         <div className="flex items-center justify-between text-xs text-[#64748B]">
-                            <span>Items Subtotal ({placedItems.length} pcs):</span>
-                            <span className="font-mono">₹{boqSubtotalINR.toLocaleString()} (${boqSubtotalUSD})</span>
+                            <span>Items Subtotal ({placedObjects.length} items):</span>
+                            <span className="font-mono">₹{boqSubtotal.toLocaleString()}</span>
                         </div>
                         <div className="flex items-center justify-between text-xs text-[#64748B]">
-                            <span>GST / Statutory Taxes (18%):</span>
-                            <span className="font-mono">₹{boqTaxINR.toLocaleString()}</span>
+                            <span>GST (18% Statutory):</span>
+                            <span className="font-mono">₹{boqTax.toLocaleString()}</span>
                         </div>
-                        <div className="flex items-center justify-between text-sm font-bold text-[#0F172A] pt-1 border-t border-black/5 font-heading">
-                            <span>Total Estimated BOQ:</span>
-                            <span className="font-mono text-[#FF5C00] text-base">
-                                ₹{boqTotalINR.toLocaleString()} (${boqTotalUSD})
-                            </span>
+                        <div className="flex items-center justify-between text-sm font-bold text-[#0F172A] pt-2 border-t border-black/5 font-heading">
+                            <span>Grand Total Estimate:</span>
+                            <span className="font-mono text-[#FF5C00] text-base">₹{boqTotal.toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
-            </div>
-
-            {/* TAB 4: UNIVERSAL 3D CAD EXPORT & CLIENT SHARING */}
-            <div className="bg-white rounded-2xl border border-black/10 p-5 sm:p-6 shadow-sm space-y-4">
-                <div className="flex items-center justify-between flex-wrap gap-2 pb-3 border-b border-black/5">
-                    <div className="flex items-center gap-2">
-                        <Building className="w-5 h-5 text-[#FF5C00]" />
-                        <h4 className="font-extrabold text-sm text-[#0F172A] font-heading">
-                            Pillar 4: Universal 3D CAD Export &amp; Client WhatsApp Sharing
-                        </h4>
-                    </div>
-                    <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00]">
-                        ZERO VENDOR LOCK-IN
-                    </span>
-                </div>
-
-                <p className="text-xs text-[#64748B] leading-relaxed">
-                    Export your generated 3D environments, room dimensions, and interior assemblies to universal formats compatible with Autodesk Revit, Blender, 3ds Max, and WebGL viewers.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
-                    <button
-                        onClick={exportSnapshot}
-                        className="p-3.5 rounded-xl border border-black/10 bg-black/[0.02] hover:border-[#FF5C00]/40 text-left transition-all cursor-pointer"
-                    >
-                        <span className="text-[10px] font-mono uppercase text-[#64748B] block">WebGL Format</span>
-                        <span className="font-bold text-xs text-[#0F172A] block mt-0.5 font-heading">Export .GLB Asset</span>
-                        <span className="text-[10px] text-[#64748B]">Sub-50KB Draco geometry</span>
-                    </button>
-
-                    <button
-                        onClick={exportSnapshot}
-                        className="p-3.5 rounded-xl border border-black/10 bg-black/[0.02] hover:border-[#FF5C00]/40 text-left transition-all cursor-pointer"
-                    >
-                        <span className="text-[10px] font-mono uppercase text-[#64748B] block">Universal CAD</span>
-                        <span className="font-bold text-xs text-[#0F172A] block mt-0.5 font-heading">Export .OBJ Wavefront</span>
-                        <span className="text-[10px] text-[#64748B]">Compatible with Revit &amp; Rhino</span>
-                    </button>
-
-                    <button
-                        onClick={exportBOQCSV}
-                        className="p-3.5 rounded-xl border border-black/10 bg-black/[0.02] hover:border-[#FF5C00]/40 text-left transition-all cursor-pointer"
-                    >
-                        <span className="text-[10px] font-mono uppercase text-[#64748B] block">Commercial Data</span>
-                        <span className="font-bold text-xs text-[#0F172A] block mt-0.5 font-heading">Export BOQ (.CSV)</span>
-                        <span className="text-[10px] text-[#64748B]">Itemized quotation &amp; GST</span>
-                    </button>
-
-                    <a
-                        href={`https://wa.me/?text=${encodeURIComponent(`Check out our custom 3D architectural plan for ${selectedPlan.name} with live BOQ (₹${boqTotalINR.toLocaleString()}) on Slice3D: https://agenerativeslice.info/slice-3d`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-50 text-left transition-all flex flex-col justify-between"
-                    >
-                        <div>
-                            <span className="text-[10px] font-mono uppercase text-emerald-700 font-bold block">Instant Mobile Link</span>
-                            <span className="font-bold text-xs text-emerald-900 block mt-0.5 font-heading">Share on WhatsApp</span>
-                        </div>
-                        <span className="text-[10px] text-emerald-600 flex items-center gap-1 font-semibold mt-2">
-                            Launch client link <Share2 className="w-3 h-3" />
-                        </span>
-                    </a>
-                </div>
-            </div>
+            )}
         </div>
     );
 };
