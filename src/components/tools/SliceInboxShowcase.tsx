@@ -117,7 +117,7 @@ export const SliceInboxShowcase: React.FC = () => {
                                 <span className="font-bold text-sm text-[#0F172A] dark:text-white font-heading">
                                     SliceInbox FastMCP AI Chief of Staff
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
                                     24/7 Zero Noise Engine
                                 </span>
                             </div>
@@ -189,7 +189,7 @@ export const SliceInboxShowcase: React.FC = () => {
                                     {email.snippet}
                                 </p>
                                 <div className="flex items-center gap-2">
-                                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                    <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-md ${
                                         email.priority === 'urgent'
                                             ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
                                             : email.priority === 'normal'

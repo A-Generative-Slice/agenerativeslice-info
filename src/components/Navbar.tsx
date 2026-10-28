@@ -1,6 +1,11 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, Moon, Sun, ExternalLink } from 'lucide-react';
+import { 
+    Menu, X, Moon, Sun, ExternalLink, 
+    Boxes, Zap, Bot, Cpu, Presentation, 
+    FolderKanban, GraduationCap, ChevronRight,
+    Terminal
+} from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import logoImg from '../assets/logo.jpg';
 import { detailedProducts } from '../data/productsData';
@@ -12,127 +17,265 @@ interface NavbarProps {
 
 export const Navbar = ({ isDark, toggleTheme }: NavbarProps) => {
     const [scrolled, setScrolled] = useState(false);
-    const [isOpen, setIsOpen] = useState(false);
+    const [mobileOpen, setMobileOpen] = useState(false);
     const location = useLocation();
 
+    // Close mobile menu on route change
+    useEffect(() => {
+        setMobileOpen(false);
+    }, [location.pathname]);
+
+    // Handle scroll elevation
     useEffect(() => {
         const onScroll = () => setScrolled(window.scrollY > 20);
-        window.addEventListener('scroll', onScroll);
+        window.addEventListener('scroll', onScroll, { passive: true });
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
+    // Prevent background scroll when mobile drawer is open
+    useEffect(() => {
+        if (mobileOpen) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [mobileOpen]);
+
+    const getProductIcon = (id: string, className = "w-4 h-4") => {
+        switch (id) {
+            case 'slice-3d': return <Boxes className={className} />;
+            case 'slice-leads': return <Zap className={className} />;
+            case 'slice-mail': return <Bot className={className} />;
+            case 'slice-inbox': return <Cpu className={className} />;
+            case 'slice-ppt': return <Presentation className={className} />;
+            case 'slice-dam': return <FolderKanban className={className} />;
+            case 'slice-class': return <GraduationCap className={className} />;
+            default: return <Terminal className={className} />;
+        }
+    };
+
     return (
-        <div className="fixed top-4 sm:top-6 left-0 right-0 z-50 flex justify-end px-4 sm:px-10 pointer-events-none">
-            <motion.nav
-                layout
-                transition={{
-                    type: "spring",
-                    stiffness: 500,
-                    damping: 35,
-                    mass: 0.5
-                }}
-                className={`pointer-events-auto max-w-full px-2 py-2 sm:px-3 sm:py-2 rounded-[2rem] border shadow-2xl flex items-center gap-1 overflow-hidden transition-colors duration-500 ${
-                    scrolled 
-                        ? 'bg-white/85 dark:bg-[#0a0a0a]/85 border-black/10 dark:border-white/20 shadow-[0_8px_32px_0_rgba(31,38,135,0.07)]' 
-                        : 'bg-white/50 dark:bg-[#0a0a0a]/50 border-black/5 dark:border-white/10 shadow-none'
-                } backdrop-blur-[24px]`}
-            >
-                {/* Island Brand Logo & Identity */}
-                <Link 
-                    to="/" 
-                    onClick={() => setIsOpen(false)} 
-                    className="shrink-0 flex items-center gap-2 pl-1 pr-2"
-                >
-                    <motion.div 
-                        layout
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden border border-black/5 dark:border-white/10 shadow-sm"
+        <>
+            {/* Top Fixed Header Bar */}
+            <header className="fixed top-0 left-0 right-0 z-50 px-4 sm:px-8 pt-3 sm:pt-4 transition-all duration-200">
+                <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    {/* Brand Identity / Home Link */}
+                    <Link 
+                        to="/" 
+                        className={`flex items-center gap-3 px-3.5 py-2 rounded-2xl border transition-all duration-200 ${
+                            scrolled
+                                ? 'bg-white/90 dark:bg-[#0c0f17]/90 border-black/10 dark:border-white/10 shadow-lg backdrop-blur-xl'
+                                : 'bg-white/70 dark:bg-[#0c0f17]/70 border-black/5 dark:border-white/5 backdrop-blur-md'
+                        }`}
                     >
-                        <img src={logoImg} alt="A Generative Slice Logo" className="w-full h-full object-cover" />
-                    </motion.div>
-                    <span className="hidden md:inline font-bold text-xs tracking-wider uppercase text-[#0F172A] dark:text-white font-heading">
-                        AGS <span className="text-[#FF5C00]">SUITE</span>
-                    </span>
-                </Link>
+                        <div className="w-8 h-8 rounded-xl overflow-hidden border border-black/10 dark:border-white/15 shrink-0 shadow-sm">
+                            <img src={logoImg} alt="A Generative Slice" className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex flex-col">
+                            <div className="flex items-center gap-1.5">
+                                <span className="font-extrabold text-xs tracking-wider uppercase text-[#0F172A] dark:text-white font-heading">
+                                    A GENERATIVE SLICE
+                                </span>
+                                <span className="text-[#FF5C00] font-mono text-[10px] font-bold">.info</span>
+                            </div>
+                            <span className="text-[10px] text-[#64748B] dark:text-white/50 tracking-tight hidden sm:block">
+                                Systems Sandbox & Lab
+                            </span>
+                        </div>
+                    </Link>
 
-                {/* Nav Links Container */}
-                <div className="flex items-center min-w-0">
-                    <AnimatePresence mode="popLayout" initial={false}>
-                        {isOpen && (
-                            <motion.div 
-                                layout
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                exit={{ opacity: 0, x: 20 }}
-                                className="flex items-center gap-1 sm:gap-1.5 px-2 overflow-x-auto whitespace-nowrap scroll-smooth touch-pan-x [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]"
+                    {/* Desktop Navigation Links */}
+                    <nav className="hidden lg:flex items-center gap-1 px-3 py-1.5 rounded-2xl border bg-white/80 dark:bg-[#0c0f17]/80 border-black/10 dark:border-white/10 shadow-lg backdrop-blur-xl">
+                        <Link
+                            to="/"
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
+                                location.pathname === '/' 
+                                    ? 'text-[#FF5C00] bg-[#FF5C00]/10 font-bold' 
+                                    : 'text-[#64748B] dark:text-white/70 hover:text-[#FF5C00] hover:bg-black/5 dark:hover:bg-white/5'
+                            }`}
+                        >
+                            Hub
+                        </Link>
+
+                        {detailedProducts.map((p) => (
+                            <Link
+                                key={p.id}
+                                to={p.path}
+                                className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-colors ${
+                                    location.pathname === p.path 
+                                        ? 'text-[#FF5C00] bg-[#FF5C00]/10 font-bold' 
+                                        : 'text-[#64748B] dark:text-white/70 hover:text-[#FF5C00] hover:bg-black/5 dark:hover:bg-white/5'
+                                }`}
                             >
-                                <Link
-                                    to="/"
-                                    onClick={() => setIsOpen(false)}
-                                    className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 relative whitespace-nowrap ${
-                                        location.pathname === '/' 
-                                            ? 'text-[#FF5C00] bg-[#FF5C00]/10 border border-[#FF5C00]/20' 
-                                            : 'text-black/60 dark:text-white/60 hover:text-[#FF5C00] hover:bg-[#FF5C00]/5'
-                                    }`}
-                                >
-                                    Platform Hub
-                                </Link>
+                                {p.name.replace('Slice', '')}
+                            </Link>
+                        ))}
+                    </nav>
 
-                                {detailedProducts.map((p) => (
-                                    <Link
-                                        key={p.id}
-                                        to={p.path}
-                                        onClick={() => setIsOpen(false)}
-                                        className={`px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider transition-all duration-200 relative whitespace-nowrap ${
-                                            location.pathname === p.path 
-                                                ? 'text-[#FF5C00] bg-[#FF5C00]/10 border border-[#FF5C00]/20' 
-                                                : 'text-black/60 dark:text-white/60 hover:text-[#FF5C00] hover:bg-[#FF5C00]/5'
-                                        }`}
-                                    >
-                                        {p.name}
-                                    </Link>
-                                ))}
+                    {/* Right Action Group */}
+                    <div className="flex items-center gap-2">
+                        {/* Corporate Gateway Link (Desktop) */}
+                        <a
+                            href="https://agenerativeslice.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-[#FF5C00] bg-[#FF5C00]/10 hover:bg-[#FF5C00]/15 border border-[#FF5C00]/25 transition-all font-heading"
+                            title="Visit Corporate Headquarters"
+                        >
+                            <span>agenerativeslice.com</span>
+                            <ExternalLink className="w-3 h-3" />
+                        </a>
 
+                        {/* Theme Toggle Button (Min 44x44px touch target) */}
+                        <button 
+                            onClick={toggleTheme} 
+                            className="w-11 h-11 rounded-xl flex items-center justify-center border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0c0f17]/80 text-[#0F172A] dark:text-white hover:text-[#FF5C00] dark:hover:text-[#FF5C00] transition-colors shadow-sm cursor-pointer"
+                            aria-label="Toggle light or dark theme"
+                        >
+                            {isDark ? (
+                                <Sun className="w-4 h-4 text-amber-400" />
+                            ) : (
+                                <Moon className="w-4 h-4 text-slate-700" />
+                            )}
+                        </button>
+
+                        {/* Mobile Hamburger / Close Button (Min 44x44px touch target) */}
+                        <button 
+                            onClick={() => setMobileOpen(!mobileOpen)}
+                            className="lg:hidden w-11 h-11 rounded-xl flex items-center justify-center border border-black/10 dark:border-white/10 bg-white/80 dark:bg-[#0c0f17]/80 text-[#0F172A] dark:text-white hover:text-[#FF5C00] transition-colors shadow-sm cursor-pointer"
+                            aria-label={mobileOpen ? "Close menu" : "Open navigation menu"}
+                            aria-expanded={mobileOpen}
+                        >
+                            {mobileOpen ? (
+                                <X className="w-5 h-5 text-[#FF5C00]" />
+                            ) : (
+                                <Menu className="w-5 h-5" />
+                            )}
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* Mobile Drawer Navigation (Full Accessibility & High-Touch Mobile UX) */}
+            <AnimatePresence>
+                {mobileOpen && (
+                    <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="fixed inset-0 z-40 lg:hidden bg-black/60 backdrop-blur-md flex flex-col justify-end"
+                        onClick={() => setMobileOpen(false)}
+                    >
+                        <motion.div
+                            initial={{ y: "100%" }}
+                            animate={{ y: 0 }}
+                            exit={{ y: "100%" }}
+                            transition={{ type: "spring", damping: 28, stiffness: 300 }}
+                            className="bg-white dark:bg-[#0c0f17] border-t border-black/10 dark:border-white/10 rounded-t-3xl p-6 max-h-[85vh] overflow-y-auto flex flex-col shadow-2xl"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Drawer Drag Bar */}
+                            <div className="w-12 h-1.5 bg-black/10 dark:bg-white/10 rounded-full mx-auto mb-5" />
+
+                            {/* Drawer Header */}
+                            <div className="flex items-center justify-between pb-4 border-b border-black/5 dark:border-white/10 mb-4">
+                                <div>
+                                    <span className="text-[10px] font-mono uppercase tracking-widest text-[#FF5C00] font-bold block">
+                                        | Navigation Menu
+                                    </span>
+                                    <h3 className="text-base font-black text-[#0F172A] dark:text-white font-heading">
+                                        Slice Suite Workspaces
+                                    </h3>
+                                </div>
+                                <span className="text-xs font-mono text-[#64748B] dark:text-white/40">
+                                    7 Sandboxes
+                                </span>
+                            </div>
+
+                            {/* Hub Link */}
+                            <Link
+                                to="/"
+                                onClick={() => setMobileOpen(false)}
+                                className={`flex items-center justify-between p-3.5 rounded-2xl border mb-2 transition-all min-h-[50px] ${
+                                    location.pathname === '/'
+                                        ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]'
+                                        : 'border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] text-[#0F172A] dark:text-white'
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-xl bg-[#FF5C00]/10 text-[#FF5C00] flex items-center justify-center">
+                                        <Terminal className="w-4 h-4" />
+                                    </div>
+                                    <div>
+                                        <span className="font-bold text-sm block font-heading">Platform Hub</span>
+                                        <span className="text-[11px] text-[#64748B] dark:text-white/50">Overview & Architecture</span>
+                                    </div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 text-[#64748B] dark:text-white/40" />
+                            </Link>
+
+                            {/* 7 Workspaces List */}
+                            <div className="space-y-2 mb-6">
+                                {detailedProducts.map((p) => {
+                                    const active = location.pathname === p.path;
+                                    return (
+                                        <Link
+                                            key={p.id}
+                                            to={p.path}
+                                            onClick={() => setMobileOpen(false)}
+                                            className={`flex items-center justify-between p-3.5 rounded-2xl border transition-all min-h-[50px] ${
+                                                active
+                                                    ? 'border-[#FF5C00] bg-[#FF5C00]/10 text-[#FF5C00]'
+                                                    : 'border-black/5 dark:border-white/5 bg-black/[0.02] dark:bg-white/[0.02] text-[#0F172A] dark:text-white hover:border-[#FF5C00]/30'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                                                    active ? 'bg-[#FF5C00] text-white' : 'bg-black/5 dark:bg-white/10 text-[#FF5C00]'
+                                                }`}>
+                                                    {getProductIcon(p.id, "w-4 h-4")}
+                                                </div>
+                                                <div>
+                                                    <span className="font-bold text-sm block font-heading">{p.name}</span>
+                                                    <span className="text-[11px] text-[#64748B] dark:text-white/50">{p.tagline}</span>
+                                                </div>
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 text-[#64748B] dark:text-white/40" />
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+
+                            {/* External Links & Corporate Bridge */}
+                            <div className="pt-4 border-t border-black/5 dark:border-white/10 space-y-2">
                                 <a
                                     href="https://agenerativeslice.com"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[#FF5C00] hover:bg-[#FF5C00]/10 flex items-center gap-1 transition-all"
-                                    title="Open official corporate website"
+                                    className="flex items-center justify-between p-3.5 rounded-2xl border border-[#FF5C00]/30 bg-[#FF5C00]/5 text-[#FF5C00] font-bold text-xs uppercase tracking-wider min-h-[48px]"
                                 >
-                                    <span>agenerativeslice.com</span>
-                                    <ExternalLink className="w-3 h-3" />
+                                    <span>Corporate Studio: agenerativeslice.com</span>
+                                    <ExternalLink className="w-4 h-4" />
                                 </a>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
 
-                    {/* Divider */}
-                    <motion.div layout className="h-6 w-[1px] bg-black/10 dark:bg-white/10 mx-1" />
-
-                    {/* Actions */}
-                    <div className="flex items-center gap-1">
-                        <button 
-                            onClick={toggleTheme} 
-                            className="p-2.5 rounded-xl hover:bg-orange-500/10 hover:text-orange-500 transition-all text-black/70 dark:text-white/70"
-                            aria-label="Toggle Theme"
-                            title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
-                        >
-                            {isDark ? <Sun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5 text-slate-700" />}
-                        </button>
-                        
-                        <button 
-                            className={`p-2.5 rounded-xl transition-all duration-300 ${isOpen ? 'bg-[#FF5C00] text-white shadow-lg shadow-orange-500/20' : 'hover:bg-orange-500/10 hover:text-orange-500 text-black/70 dark:text-white/70'}`}
-                            onClick={() => setIsOpen(!isOpen)}
-                            aria-label="Toggle Menu"
-                            title="Toggle Tools Menu"
-                        >
-                            {isOpen ? <X className="w-4 h-4 sm:w-5 sm:h-5" /> : <Menu className="w-4 h-4 sm:w-5 sm:h-5" />}
-                        </button>
-                    </div>
-                </div>
-            </motion.nav>
-        </div>
+                                <a
+                                    href="https://github.com/A-Generative-Slice"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center justify-between p-3.5 rounded-2xl border border-black/10 dark:border-white/10 bg-black/5 dark:bg-white/5 text-[#0F172A] dark:text-white font-mono text-xs min-h-[48px]"
+                                >
+                                    <span>github.com/A-Generative-Slice</span>
+                                    <ChevronRight className="w-4 h-4 text-[#64748B] dark:text-white/40" />
+                                </a>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </>
     );
 };

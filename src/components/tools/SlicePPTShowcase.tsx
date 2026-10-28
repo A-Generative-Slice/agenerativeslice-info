@@ -24,7 +24,7 @@ export const SlicePPTShowcase: React.FC = () => {
             subtitle: 'Bespoke AI Architecture & 3D Interactive Client Solutions',
             content: (
                 <div className="flex flex-col justify-center h-full text-center space-y-4">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FF5C00]/10 text-[#FF5C00] text-xs font-semibold mx-auto border border-[#FF5C00]/20">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FF5C00]/10 text-[#FF5C00] text-xs font-mono font-bold mx-auto border border-[#FF5C00]/20">
                         <Sparkles className="w-3.5 h-3.5" /> Engineered by A Generative Slice
                     </div>
                     <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] dark:text-white font-heading tracking-tight">

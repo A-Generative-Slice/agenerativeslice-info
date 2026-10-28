@@ -151,7 +151,7 @@ export const SliceDAMShowcase: React.FC = () => {
                                 <span className="font-bold text-sm text-[#0F172A] dark:text-white font-heading">
                                     SliceDAM Immutable Vault & Document Hub
                                 </span>
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-[#FF5C00]/10 text-[#FF5C00] border border-[#FF5C00]/20">
                                     SHA-256 Verified
                                 </span>
                             </div>
@@ -249,7 +249,7 @@ export const SliceDAMShowcase: React.FC = () => {
                                         {selectedDoc.title}
                                     </h3>
                                 </div>
-                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
+                                <span className="px-2.5 py-1 rounded-md text-[10px] font-mono font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
                                     {selectedDoc.status}
                                 </span>
                             </div>

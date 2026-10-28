@@ -287,7 +287,7 @@ export const Slice3DShowcase: React.FC = () => {
 
                     {/* Interactive Canvas */}
                     <div 
-                        className="relative w-full h-[460px] sm:h-[520px] cursor-grab active:cursor-grabbing touch-none select-none"
+                        className="relative w-full h-[340px] sm:h-[460px] md:h-[520px] cursor-grab active:cursor-grabbing touch-none select-none"
                         onPointerDown={handlePointerDown}
                         onPointerMove={handlePointerMove}
                         onPointerUp={handlePointerUp}
@@ -296,33 +296,35 @@ export const Slice3DShowcase: React.FC = () => {
                         <canvas ref={canvasRef} className="w-full h-full block" />
 
                         {/* Interactive HUD Overlay */}
-                        <div className="absolute top-4 left-4 bg-white/80 dark:bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-xl border border-black/5 dark:border-white/10 text-xs text-[#0F172A] dark:text-white/80 flex items-center gap-2 pointer-events-none">
+                        <div className="absolute top-4 left-4 bg-white/90 dark:bg-black/70 backdrop-blur-md px-3 py-1.5 rounded-lg border border-black/5 dark:border-white/10 text-xs text-[#0F172A] dark:text-white/80 flex items-center gap-2 pointer-events-none">
                             <Activity className="w-3.5 h-3.5 text-[#FF5C00]" />
-                            <span>Drag to rotate 360° • Touch damped</span>
+                            <span className="font-medium text-[11px]">360° Touch / Drag Damped</span>
                         </div>
 
                         {/* Floating Viewport Controls */}
-                        <div className="absolute bottom-4 right-4 flex items-center gap-2 bg-white/90 dark:bg-black/80 backdrop-blur-md p-1.5 rounded-2xl border border-black/10 dark:border-white/10 shadow-xl">
+                        <div className="absolute bottom-4 right-4 flex items-center gap-1.5 bg-white/95 dark:bg-black/85 backdrop-blur-md p-1.5 rounded-xl border border-black/10 dark:border-white/10 shadow-xl">
                             <button
                                 onClick={() => setIsAutoSpin(!isAutoSpin)}
-                                className={`p-2 rounded-xl text-xs font-semibold transition-all ${
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${
                                     isAutoSpin 
-                                        ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20' 
+                                        ? 'bg-[#FF5C00] text-white shadow-sm' 
                                         : 'hover:bg-black/5 dark:hover:bg-white/10 text-[#0F172A] dark:text-white/70'
                                 }`}
                                 title={isAutoSpin ? 'Pause auto-spin' : 'Resume auto-spin'}
+                                aria-label="Toggle auto spin"
                             >
                                 {isAutoSpin ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                             </button>
 
                             <button
                                 onClick={() => setIsWireframe(!isWireframe)}
-                                className={`p-2 rounded-xl text-xs font-semibold transition-all ${
+                                className={`w-10 h-10 rounded-lg flex items-center justify-center text-xs font-semibold transition-all ${
                                     isWireframe 
-                                        ? 'bg-[#FF5C00] text-white shadow-md shadow-[#FF5C00]/20' 
+                                        ? 'bg-[#FF5C00] text-white shadow-sm' 
                                         : 'hover:bg-black/5 dark:hover:bg-white/10 text-[#0F172A] dark:text-white/70'
                                 }`}
                                 title="Toggle wireframe mode"
+                                aria-label="Toggle wireframe"
                             >
                                 <Layers className="w-4 h-4" />
                             </button>
@@ -332,8 +334,9 @@ export const Slice3DShowcase: React.FC = () => {
                                     rotRef.current = { x: 25, y: 35 };
                                     setZoom(1);
                                 }}
-                                className="p-2 rounded-xl text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/10 text-[#0F172A] dark:text-white/70 transition-all"
+                                className="w-10 h-10 rounded-lg flex items-center justify-center text-xs font-semibold hover:bg-black/5 dark:hover:bg-white/10 text-[#0F172A] dark:text-white/70 transition-all"
                                 title="Reset camera"
+                                aria-label="Reset camera"
                             >
                                 <RotateCcw className="w-4 h-4" />
                             </button>

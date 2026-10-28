@@ -341,15 +341,15 @@ export const SliceLeadsShowcase: React.FC = () => {
                                             {lead.name}
                                         </span>
                                         {lead.whatsappVerified ? (
-                                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold flex items-center gap-1">
+                                            <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-mono font-bold flex items-center gap-1 border border-emerald-500/20">
                                                 <CheckCircle2 className="w-3 h-3" /> WhatsApp Live
                                             </span>
                                         ) : (
-                                            <span className="px-2 py-0.5 rounded-full bg-slate-500/10 text-slate-500 text-[10px] font-medium">
-                                                Landline
+                                            <span className="px-2 py-0.5 rounded-md bg-slate-500/10 text-slate-500 text-[10px] font-mono font-medium border border-slate-500/20">
+                                                Landline (044)
                                             </span>
                                         )}
-                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-orange-500/10 text-[#FF5C00]">
+                                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-orange-500/10 text-[#FF5C00] border border-orange-500/20">
                                             {lead.pitchStatus}
                                         </span>
                                     </div>
@@ -422,9 +422,9 @@ export const SliceLeadsShowcase: React.FC = () => {
                                         href={activeLead.whatsappVerified ? `https://wa.me/${activeLead.phone.replace(/[^0-9]/g, '')}` : `tel:${activeLead.phone}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="w-full py-2.5 rounded-xl bg-[#FF5C00] text-white text-xs font-bold hover:bg-[#FF8C1A] transition-all flex items-center justify-center gap-2 shadow-lg shadow-[#FF5C00]/25"
+                                        className="w-full py-3 rounded-xl bg-[#FF5C00] text-white text-xs font-bold hover:bg-[#FF8C1A] transition-all flex items-center justify-center gap-2 shadow-sm font-heading min-h-[46px]"
                                     >
-                                        <MessageSquare className="w-3.5 h-3.5" />
+                                        <MessageSquare className="w-4 h-4" />
                                         <span>{activeLead.whatsappVerified ? 'Open WhatsApp Chat' : 'Call Office Phone'}</span>
                                     </a>
                                 </div>

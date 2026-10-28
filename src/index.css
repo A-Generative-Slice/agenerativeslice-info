@@ -214,6 +214,15 @@ body {
   scrollbar-width: none;
 }
 
+/* Mobile touch ergonomics & momentum scrolling */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
+}
+
 /* === Scrollbar === */
 ::-webkit-scrollbar {
   width: 6px;
