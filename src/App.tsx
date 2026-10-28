@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { Navbar } from './components/Navbar';
 import { Footer } from './components/Footer';
@@ -27,38 +27,29 @@ function ScrollToTop() {
 }
 
 export function App() {
-    const [isDark, setIsDark] = useState(true);
-
-    // Initial theme sync with documentElement
+    // Lock default to crisp, modern white/light theme (no dark mode, no theme toggle)
     useEffect(() => {
-        if (isDark) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
-    }, [isDark]);
+        document.documentElement.classList.remove('dark');
+    }, []);
 
     return (
         <BrowserRouter>
             <ScrollToTop />
-            <div className="min-h-screen bg-[#fafafa] dark:bg-[#07090e] text-[#0f172a] dark:text-[#f8fafc] transition-colors duration-200 relative overflow-x-hidden flex flex-col font-sans selection:bg-[#FF5C00]/20 selection:text-[#FF5C00]">
-                {/* Precision Studio Engineering Grid (No AI Slop Particles) */}
+            <div className="min-h-screen bg-[#fafafa] text-[#0f172a] relative overflow-x-hidden flex flex-col font-sans selection:bg-[#FF5C00]/20 selection:text-[#FF5C00]">
+                {/* Precision Studio Engineering Grid Backdrop */}
                 <div 
-                    className="fixed inset-0 pointer-events-none z-0 opacity-40 dark:opacity-20"
+                    className="fixed inset-0 pointer-events-none z-0 opacity-40"
                     style={{
                         backgroundImage: `linear-gradient(to right, rgba(120, 130, 150, 0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(120, 130, 150, 0.12) 1px, transparent 1px)`,
                         backgroundSize: '36px 36px'
                     }}
                 />
 
-                {/* Subtle Architectural Ambient Lighting */}
-                <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-48 bg-gradient-to-b from-[#FF5C00]/[0.04] to-transparent pointer-events-none z-0" />
+                {/* Subtle Brand Accent Ambient Gradient */}
+                <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-48 bg-gradient-to-b from-[#FF5C00]/[0.05] to-transparent pointer-events-none z-0" />
 
-                {/* Clean Responsive Navbar */}
-                <Navbar 
-                    isDark={isDark} 
-                    toggleTheme={() => setIsDark(!isDark)} 
-                />
+                {/* Clean Modern Navbar (No Theme Toggle) */}
+                <Navbar />
 
                 {/* Routed Content */}
                 <main className="relative z-10 flex-grow">
