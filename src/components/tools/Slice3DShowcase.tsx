@@ -678,7 +678,7 @@ export function Slice3DShowcase() {
     const latestAiMessage = [...chatMessages].reverse().find(m => m.sender === 'ai') || chatMessages[0];
 
     return (
-        <div className="relative w-screen h-[100dvh] overflow-hidden bg-slate-900 font-sans select-none">
+        <div className="relative w-full h-[74svh] min-h-[560px] max-h-[820px] overflow-hidden rounded-[24px] border border-black/10 bg-slate-900 font-sans select-none">
             {/* ================================================================= */}
             {/* 1. PRIMARY LIVE 3D VIEWPORT (Full Screen WebGL) */}
             {/* ================================================================= */}

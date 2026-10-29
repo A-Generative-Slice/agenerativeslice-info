@@ -11,7 +11,6 @@ import { SlicePPTPage } from './pages/SlicePPTPage';
 import { SliceDAMPage } from './pages/SliceDAMPage';
 import { SliceClassPage } from './pages/SliceClassPage';
 
-// Scroll to top helper on route transitions
 function ScrollToTop() {
     const { pathname } = useLocation();
 
@@ -27,7 +26,6 @@ function ScrollToTop() {
 }
 
 export function App() {
-    // Lock default to crisp, modern white/light theme (no dark mode, no theme toggle)
     useEffect(() => {
         document.documentElement.classList.remove('dark');
     }, []);
@@ -35,23 +33,21 @@ export function App() {
     return (
         <BrowserRouter>
             <ScrollToTop />
-            <div className="min-h-screen bg-[#fafafa] text-[#0f172a] relative overflow-x-hidden flex flex-col font-sans selection:bg-[#FF5C00]/20 selection:text-[#FF5C00]">
-                {/* Precision Studio Engineering Grid Backdrop */}
-                <div 
-                    className="fixed inset-0 pointer-events-none z-0 opacity-40"
-                    style={{
-                        backgroundImage: `linear-gradient(to right, rgba(120, 130, 150, 0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(120, 130, 150, 0.12) 1px, transparent 1px)`,
-                        backgroundSize: '36px 36px'
-                    }}
-                />
+            <div className="min-h-screen bg-[#fafafa] text-[#0f172a] relative overflow-x-hidden flex flex-col font-sans">
+                {/* Atmosphere: aurora glows, precision grid, film grain */}
+                <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                    <div
+                        className="aurora-blob bg-[#FF5C00] w-[38vw] h-[38vw] max-w-[520px] max-h-[520px] -top-[16vw] -left-[12vw] opacity-[0.11]"
+                        style={{ animationDelay: '-4s' }}
+                    />
+                    <div className="aurora-blob bg-[#FFB066] w-[30vw] h-[30vw] max-w-[440px] max-h-[440px] top-[6vh] right-[-14vw] opacity-[0.1]" />
+                    <div className="aurora-blob bg-[#FFD9B8] w-[26vw] h-[26vw] max-w-[360px] max-h-[360px] bottom-[-12vh] left-[28vw] opacity-[0.12]" />
+                    <div className="absolute inset-0 atmosphere-grid" />
+                    <div className="absolute inset-0 noise-overlay" />
+                </div>
 
-                {/* Subtle Brand Accent Ambient Gradient */}
-                <div className="fixed top-0 left-1/2 -translate-x-1/2 w-full max-w-7xl h-48 bg-gradient-to-b from-[#FF5C00]/[0.05] to-transparent pointer-events-none z-0" />
-
-                {/* Clean Modern Navbar (No Theme Toggle) */}
                 <Navbar />
 
-                {/* Routed Content */}
                 <main className="relative z-10 flex-grow">
                     <Routes>
                         <Route path="/" element={<HomePage />} />
@@ -66,7 +62,6 @@ export function App() {
                     </Routes>
                 </main>
 
-                {/* Official Footer */}
                 <Footer />
             </div>
         </BrowserRouter>
