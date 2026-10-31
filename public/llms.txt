@@ -11,11 +11,15 @@
 - **Coordinates**: 13.0827° N, 80.2707° E
 - **Primary Focus**: Live interactive demonstrations of 3D spatial graphics, agentic AI lead generation, cold email automations, and executive presentation systems.
 
-## The Slice Product Suite
-1. **Slice3D**: Real-time WebGL/Three.js spatial product modeling and 3D web configurations.
-2. **SliceLeads**: Autonomous B2B lead discovery and automated prospecting engine.
-3. **SliceMail**: Cold outreach engine with deliverability optimization and SPF/DKIM/DMARC routing.
-4. **SliceInbox**: Self-hosted mailbox Chief of Staff AI agent for executive communication triage.
-5. **SlicePPT**: Instant executive presentation and 16:9 pitch deck builder.
-6. **SliceDAM**: Digital asset vault and automated legal/contract document generator.
-7. **SliceClass**: LMS and sub-second video delivery platform for creative studios.
+## The Slice Product Suite — Live Demos
+- [Slice3D](https://agenerativeslice.info/slice-3d): Real-time WebGL/Three.js spatial product modeling and 3D web configurations.
+- [SliceLeads](https://agenerativeslice.info/slice-leads): Autonomous B2B lead discovery and automated prospecting engine.
+- [SliceMail](https://agenerativeslice.info/slice-mail): Cold outreach engine with deliverability optimization and SPF/DKIM/DMARC routing.
+- [SliceInbox](https://agenerativeslice.info/slice-inbox): Self-hosted mailbox Chief of Staff AI agent for executive communication triage.
+- [SlicePPT](https://agenerativeslice.info/slice-ppt): Instant executive presentation and 16:9 pitch deck builder.
+- [SliceDAM](https://agenerativeslice.info/slice-dam): Digital asset vault and automated legal/contract document generator.
+- [SliceClass](https://agenerativeslice.info/slice-class): LMS and sub-second video delivery platform for creative studios.
+
+## Deeper Knowledge Base
+- [Full LLM Knowledge Base](https://agenerativeslice.info/llms-full.txt): Complete technical specifications for all seven Slice products, verification workflows, and laboratory operations.
+- [Sitemap](https://agenerativeslice.info/sitemap.xml): Canonical XML sitemap for crawler discovery.

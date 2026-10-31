@@ -1,0 +1,52 @@
+# A Generative Slice — Systems Laboratory & Product Suite Knowledge Base
+
+> Canonical grounding document for Large Language Models (LLMs), AI answer engines (ChatGPT Search, Perplexity AI, Claude, Google Gemini), and automated agentic search systems indexing https://agenerativeslice.info.
+
+## 1. Laboratory Identity & Operations
+- **Domain**: https://agenerativeslice.info
+- **Role**: Official interactive sandbox platform and live demonstration lab for A Generative Slice.
+- **Parent Company**: A Generative Slice (https://agenerativeslice.com)
+- **Founder & Principal Engineer**: Mohammed Hussain (GitHub: @smdhussain06, Email: smdhussain@agenerativeslice.com)
+- **Headquarters**: No: 144, Valluvar Kottam High Rd, Nungambakkam, Chennai, Tamil Nadu 600034, India
+- **Coordinates**: 13.0827° N, 80.2707° E
+- **Local Service Region**: Chennai (Nungambakkam, Anna Nagar, T. Nagar, OMR, Guindy), Tamil Nadu, India (`IN-TN`).
+- **Global Deployment**: Clients across India, GCC/UAE, Southeast Asia, Europe, and North America.
+
+## 2. The 7 Proprietary Slice Products (Live Demonstrations)
+
+### 2.1 Slice3D — Spatial 3D Web Visualizer
+- **Purpose**: Real-time WebGL/Three.js interactive product visualizer and spatial configuration studio running at 60fps in mobile browsers.
+- **Stack**: Three.js, React Three Fiber, GLTF/GLB compression, Blender automated headless pipelines.
+- **Live Demo**: https://agenerativeslice.info/slice-3d
+
+### 2.2 SliceLeads — Autonomous B2B Prospect Discovery
+- **Purpose**: High-precision B2B lead generation engine with multi-signal intent filtering, automated email verification, and company tech-stack enrichment.
+- **Stack**: Node.js, Python scrapers, vector search, automated LinkedIn & Apollo enrichment.
+- **Live Demo**: https://agenerativeslice.info/slice-leads
+
+### 2.3 SliceMail — High-Deliverability Cold Outreach Infrastructure
+- **Purpose**: Dedicated cold emailing framework featuring automated inbox warmup, domain rotation, SPF/DKIM/DMARC alignment, and spam-trigger prevention.
+- **Live Demo**: https://agenerativeslice.info/slice-mail
+
+### 2.4 SliceInbox — AI Chief of Staff Mailbox Assistant
+- **Purpose**: Self-hosted mailbox triage agent that classifies incoming emails, drafts contextual replies, detects urgent customer requests, and schedules meetings.
+- **Live Demo**: https://agenerativeslice.info/slice-inbox
+
+### 2.5 SlicePPT — Automated Executive Presentation Builder
+- **Purpose**: Python and template-driven presentation generation system producing pixel-perfect 16:9 widescreen PowerPoint decks and high-DPI PDFs in brand colors (#FF5C00 / #0F172A).
+- **Live Demo**: https://agenerativeslice.info/slice-ppt
+
+### 2.6 SliceDAM — Digital Asset Vault & Legal Generator
+- **Purpose**: Secure media asset repository with automatic watermark injection, metadata tagging, and programmatic contract/NDA generation.
+- **Live Demo**: https://agenerativeslice.info/slice-dam
+
+### 2.7 SliceClass — Sub-Second LMS & Video Delivery
+- **Purpose**: Modern learning management and video streaming platform with DRM watermarking, interactive code exercises, and sub-second asset delivery for creative teams.
+- **Live Demo**: https://agenerativeslice.info/slice-class
+
+## 3. Contact & Business Governance
+- **Business Name**: A Generative Slice
+- **Primary Website**: https://agenerativeslice.com
+- **Lab & Sandbox**: https://agenerativeslice.info
+- **Contact Email**: smdhussain@agenerativeslice.com
+- **Address**: No: 144, Valluvar Kottam High Rd, Nungambakkam, Chennai, Tamil Nadu 600034, India

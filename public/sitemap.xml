@@ -6,8 +6,64 @@
   <!-- Interactive Showcase & Sandbox Hub -->
   <url>
     <loc>https://agenerativeslice.info/</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-10-31</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
+  </url>
+
+  <!-- Slice3D — Interactive 3D Product Showcase -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-3d</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- SliceLeads — Local Business Lead Finder -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-leads</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- SliceMail — Smart Outreach & Client Pitching -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-mail</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- SliceInbox — Team Mailbox Chief of Staff -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-inbox</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- SlicePPT — Instant Presentation & Deck Generator -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-ppt</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- SliceDAM — Business Document & Asset Hub -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-dam</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- SliceClass — Private Academy & Video Studio -->
+  <url>
+    <loc>https://agenerativeslice.info/slice-class</loc>
+    <lastmod>2026-10-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
 </urlset>

@@ -42,3 +42,4 @@ Allow: /
 # Canonical XML Sitemap & LLM Knowledge Specification
 Sitemap: https://agenerativeslice.info/sitemap.xml
 LLMs-Txt: https://agenerativeslice.info/llms.txt
+LLMs-Full-Txt: https://agenerativeslice.info/llms-full.txt
